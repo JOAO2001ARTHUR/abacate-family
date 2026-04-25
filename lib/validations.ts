@@ -23,10 +23,9 @@ export const schemaLancamento = z.object({
 export const schemaCategoria = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   cor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor inválida — use formato #RRGGBB"),
-  icone: z.string().optional(),
-  ordem: z.number().int().default(0),
-  ativo: z.boolean().default(true),
+  icone: z.string().optional().default(""),
+  ordem: z.number().int().optional().default(0),
+  ativo: z.boolean().optional().default(true),
 });
 
-export type LancamentoInput = z.infer<typeof schemaLancamento>;
-export type CategoriaInput = z.infer<typeof schemaCategoria>;
+export type CategoriaInput = z.input<typeof schemaCategoria>;
