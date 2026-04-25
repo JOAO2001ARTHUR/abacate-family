@@ -1,0 +1,39 @@
+import { create } from 'zustand';
+
+type ModalTipo = 'BAIXAR' | 'CANCELAR' | 'EDITAR_LANCAMENTO' | 'CRIAR_LANCAMENTO' | 'CRIAR_CATEGORIA' | 'CRIAR_CONTATO' | 'CONFIRMAR_ESCOPO';
+
+interface Filtros {
+  natureza: 'ENTRADA' | 'SAIDA' | 'TODAS';
+  status: 'PENDENTE' | 'BAIXADA' | 'ATRASADA' | 'TODAS';
+  categoria_id?: string;
+  contato_id?: string;
+  busca: string;
+}
+
+interface UIStore {
+  mesAtivo: string; // Formato "YYYY-MM"
+  filtrosAtivos: Filtros;
+  modalAberto: ModalTipo | null;
+  idSelecionado: string | null;
+  setMesAtivo: (mes: string) => void;
+  setFiltros: (f: Partial<Filtros>) => void;
+  abrirModal: (tipo: ModalTipo, id?: string) => void;
+  fecharModal: () => void;
+}
+
+export const useUIStore = create<UIStore>((set) => ({
+  mesAtivo: new Date().toISOString().slice(0, 7),
+  filtrosAtivos: {
+    natureza: 'TODAS',
+    status: 'TODAS',
+    busca: '',
+  },
+  modalAberto: null,
+  idSelecionado: null,
+  setMesAtivo: (mes) => set({ mesAtivo: mes }),
+  setFiltros: (f) => set((state) => ({ 
+    filtrosAtivos: { ...state.filtrosAtivos, ...f } 
+  })),
+  abrirModal: (tipo, id = null) => set({ modalAberto: tipo, idSelecionado: id }),
+  fecharModal: () => set({ modalAberto: null, idSelecionado: null }),
+}));

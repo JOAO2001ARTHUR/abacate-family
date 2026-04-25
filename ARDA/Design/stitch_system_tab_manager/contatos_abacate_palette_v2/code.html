@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Contatos - FinSaaS</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#434655",
+                        "outline": "#737686",
+                        "inverse-on-surface": "#f0f0fb",
+                        "background": "#faf8ff",
+                        "on-surface": "#191b23",
+                        "primary-container": "#95d982",
+                        "primary": "#397c2d",
+                        "on-secondary-fixed": "#0b1c30",
+                        "surface-dim": "#d9d9e5",
+                        "inverse-surface": "#2e3039",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#943700",
+                        "primary-fixed-dim": "#95d982",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#e1e2ed",
+                        "tertiary-fixed-dim": "#ffb596",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#e1e2ed",
+                        "on-tertiary-fixed-variant": "#7d2d00",
+                        "surface": "#faf8ff",
+                        "on-tertiary-container": "#ffede6",
+                        "on-primary-fixed-variant": "#397c2d",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f3f3fe",
+                        "inverse-primary": "#95d982",
+                        "tertiary-fixed": "#ffdbcd",
+                        "surface-tint": "#397c2d",
+                        "surface-container-high": "#e7e7f3",
+                        "on-primary-fixed": "#10230c",
+                        "secondary-container": "#f2ffd9",
+                        "surface-container": "#ededf9",
+                        "surface-bright": "#faf8ff",
+                        "primary-fixed": "#f2ffd9",
+                        "tertiary-container": "#bc4800",
+                        "on-background": "#191b23",
+                        "secondary-fixed-dim": "#b7c8e1",
+                        "on-secondary-fixed-variant": "#38485d",
+                        "on-tertiary-fixed": "#360f00",
+                        "outline-variant": "#c3c6d7",
+                        "secondary": "#505f76",
+                        "on-primary-container": "#10230c",
+                        "on-secondary-container": "#54647a",
+                        "on-primary": "#ffffff",
+                        "secondary-fixed": "#d3e4fe"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "xs": "4px",
+                        "container-max": "1440px",
+                        "lg": "24px",
+                        "gutter": "20px"
+                    },
+                    "fontFamily": {
+                        "h2": ["Inter"],
+                        "display": ["Inter"],
+                        "tabular-nums": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-base": ["Inter"],
+                        "h1": ["Inter"],
+                        "label-caps": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h2": ["18px", {"lineHeight": "1.4", "letterSpacing": "0em", "fontWeight": "600"}],
+                        "display": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "tabular-nums": ["14px", {"lineHeight": "1", "letterSpacing": "0em", "fontWeight": "500"}],
+                        "body-sm": ["13px", {"lineHeight": "1.5", "letterSpacing": "0em", "fontWeight": "400"}],
+                        "body-base": ["14px", {"lineHeight": "1.5", "letterSpacing": "0em", "fontWeight": "400"}],
+                        "h1": ["24px", {"lineHeight": "1.3", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "label-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Baseline grid utility for development/consistency */
+        .baseline-grid {
+            background-image: linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px);
+            background-size: 100% 4px;
+        }
+        /* Custom scrollbar for clean aesthetic */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c3c6d7;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #397c2d;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-base antialiased flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-low border-r border-outline-variant h-screen w-64 fixed left-0 top-0 z-50 flex flex-col p-4 gap-2 overflow-y-auto">
+<!-- Brand/Header -->
+<div class="flex items-center gap-3 px-4 py-md mb-md">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold">F</div>
+<div>
+<h1 class="text-h2 font-h2 font-black text-primary tracking-tight">Financial Admin</h1>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Pro Plan</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<div class="flex flex-col gap-1 flex-1">
+<!-- Dashboard -->
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all scale-95 active:scale-100 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-sm text-body-sm font-medium">Dashboard</span>
+</a>
+<!-- Entradas e Saídas -->
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all scale-95 active:scale-100 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="swap_horiz">swap_horiz</span>
+<span class="font-body-sm text-body-sm font-medium">Entradas e Saídas</span>
+</a>
+<!-- Categorias -->
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-all scale-95 active:scale-100 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="category">category</span>
+<span class="font-body-sm text-body-sm font-medium">Categorias</span>
+</a>
+<!-- Contatos (ACTIVE) -->
+<a class="flex items-center gap-3 px-4 py-3 text-primary bg-primary-fixed rounded-lg transition-all scale-95 active:scale-100 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="contacts" data-weight="fill" style="font-variation-settings: 'FILL' 1;">contacts</span>
+<span class="font-body-sm text-body-sm font-medium">Contatos</span>
+</a>
+</div>
+<!-- CTA -->
+<div class="mt-auto pt-4 border-t border-outline-variant">
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-on-primary py-2 px-4 rounded-lg font-body-sm text-body-sm font-medium hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined" style="font-size: 18px;">add</span>
+                New Transaction
+            </button>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 ml-64 flex flex-col h-screen overflow-hidden">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center h-16 px-6 w-full sticky top-0 bg-surface-container-lowest/80 backdrop-blur-md border-b border-outline-variant z-40">
+<!-- Left: Search -->
+<div class="flex items-center w-96 relative">
+<span class="material-symbols-outlined absolute left-3 text-on-surface-variant pointer-events-none" style="font-size: 20px;">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg py-1.5 pl-10 pr-4 text-body-sm font-body-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow text-on-surface placeholder:text-outline" placeholder="Search transactions, contacts..." type="text"/>
+</div>
+<!-- Right: Actions & User -->
+<div class="flex items-center gap-4">
+<button class="text-primary font-body-sm text-body-sm font-medium hover:bg-surface-container-high px-3 py-1.5 rounded-md transition-colors">
+                    Month / Year
+                </button>
+<div class="w-px h-6 bg-outline-variant mx-2"></div>
+<button class="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<div class="ml-2 w-8 h-8 rounded-full bg-primary-fixed overflow-hidden border border-outline-variant">
+<img alt="User Profile Picture" class="w-full h-full object-cover" data-alt="professional headshot portrait of a man in business casual attire with soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCv6KsyNVwxucFcTRa5prE6TJiTEAC1rIU7VLU-qzxrAhJcA3yD_1Z189Bny4t56SPtNEi0smxqAlO-GpZFVLMUu2uITNHYiys_4lMYzifwSmYIk_ThOyCkLO1ZgVHwCTz0Or7veLBWNFxV3Ht6Oy88QuTNgm6cdyUraMOhviCQyyOc9RtlrcAoRGe8f_C6B3165ykoXeBmhndn2-K_IyOKGECdG23xaGZ2U4VRmUrpBmOTNlU6wcy0_9EHoIf_raOBnC6Ve4N57iw"/>
+</div>
+</div>
+</header>
+<!-- Page Canvas (Master-Detail Grid) -->
+<main class="flex-1 p-lg overflow-hidden bg-background">
+<div class="max-w-[1440px] mx-auto h-full grid grid-cols-12 gap-lg">
+<!-- Left Column: Master List -->
+<section class="col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl flex flex-col overflow-hidden shadow-sm">
+<!-- Header -->
+<div class="p-md border-b border-outline-variant bg-surface-container-lowest flex flex-col gap-sm shrink-0">
+<div class="flex justify-between items-center">
+<h2 class="font-h2 text-h2 text-on-surface">Contatos</h2>
+<button class="text-on-surface-variant hover:bg-surface-container-high p-1.5 rounded-md transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">filter_list</span>
+</button>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-1.5 text-outline" style="font-size: 18px;">search</span>
+<input class="w-full bg-surface border border-outline-variant rounded-md py-1.5 pl-9 pr-3 text-body-sm font-body-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-on-surface placeholder:text-outline transition-shadow" placeholder="Buscar contato..." type="text"/>
+</div>
+</div>
+<!-- Contact List -->
+<div class="flex-1 overflow-y-auto">
+<!-- Item 1 (Active) -->
+<div class="flex items-center gap-3 p-4 border-b border-outline-variant bg-primary-fixed/40 cursor-pointer border-l-4 border-l-primary">
+<div class="w-10 h-10 rounded-full bg-error-container text-on-error-container flex items-center justify-center font-bold text-body-base shrink-0 border border-error/20">
+                                EC
+                            </div>
+<div class="flex-1 min-w-0">
+<p class="font-body-base text-body-base text-on-surface font-medium truncate">Empresa Construtora S.A.</p>
+<p class="font-body-sm text-body-sm text-outline truncate">Pagador</p>
+</div>
+<div class="text-right shrink-0">
+<p class="font-tabular-nums text-tabular-nums text-error font-medium">- R$ 12.500,00</p>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center gap-3 p-4 border-b border-outline-variant hover:bg-surface-container-low cursor-pointer transition-colors border-l-4 border-l-transparent">
+<div class="w-10 h-10 rounded-full bg-primary-container text-primary flex items-center justify-center font-bold text-body-base shrink-0 border border-primary/20">
+                                AC
+                            </div>
+<div class="flex-1 min-w-0">
+<p class="font-body-base text-body-base text-on-surface font-medium truncate">Agência Criativa</p>
+<p class="font-body-sm text-body-sm text-outline truncate">Credor</p>
+</div>
+<div class="text-right shrink-0">
+<p class="font-tabular-nums text-tabular-nums text-primary font-medium">+ R$ 8.200,00</p>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center gap-3 p-4 border-b border-outline-variant hover:bg-surface-container-low cursor-pointer transition-colors border-l-4 border-l-transparent">
+<div class="w-10 h-10 rounded-full bg-error-container text-on-error-container flex items-center justify-center font-bold text-body-base shrink-0 border border-error/20">
+                                FL
+                            </div>
+<div class="flex-1 min-w-0">
+<p class="font-body-base text-body-base text-on-surface font-medium truncate">Fornecedor Logística</p>
+<p class="font-body-sm text-body-sm text-outline truncate">Pagador</p>
+</div>
+<div class="text-right shrink-0">
+<p class="font-tabular-nums text-tabular-nums text-error font-medium">- R$ 3.450,00</p>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="flex items-center gap-3 p-4 border-b border-outline-variant hover:bg-surface-container-low cursor-pointer transition-colors border-l-4 border-l-transparent">
+<div class="w-10 h-10 rounded-full bg-primary-container text-primary flex items-center justify-center font-bold text-body-base shrink-0 border border-primary/20">
+                                CI
+                            </div>
+<div class="flex-1 min-w-0">
+<p class="font-body-base text-body-base text-on-surface font-medium truncate">Consultoria Inovação</p>
+<p class="font-body-sm text-body-sm text-outline truncate">Credor</p>
+</div>
+<div class="text-right shrink-0">
+<p class="font-tabular-nums text-tabular-nums text-primary font-medium">+ R$ 15.000,00</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Column: Detail Panel -->
+<section class="col-span-8 flex flex-col gap-lg h-full overflow-y-auto pr-2 pb-lg">
+<!-- Detail Header Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm flex justify-between items-start">
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 rounded-full bg-error-container text-on-error-container flex items-center justify-center font-h1 text-h1 border-2 border-surface-container-lowest shadow-sm">
+                                EC
+                            </div>
+<div>
+<h1 class="font-display text-[28px] font-bold text-on-surface leading-tight tracking-tight">Empresa Construtora S.A.</h1>
+<div class="flex items-center gap-2 mt-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-label-caps font-label-caps bg-error-container/50 text-on-error-container border border-error/10">PAGADOR</span>
+<span class="text-body-sm font-body-sm text-outline">CNPJ: 12.345.678/0001-90</span>
+</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 border border-outline-variant rounded-lg font-body-sm text-body-sm font-medium text-on-surface hover:bg-surface-container-low transition-colors">Editar</button>
+<button class="px-4 py-2 bg-primary text-on-primary rounded-lg font-body-sm text-body-sm font-medium hover:opacity-90 transition-opacity">Nova Fatura</button>
+</div>
+</div>
+<!-- KPIs Row -->
+<div class="grid grid-cols-3 gap-lg">
+<!-- KPI 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm">
+<p class="font-label-caps text-label-caps text-outline mb-2">TOTAL PAGO</p>
+<p class="font-tabular-nums text-[24px] font-semibold text-on-surface">R$ 50.000,00</p>
+</div>
+<!-- KPI 2 (Urgency Focus - Left Border) -->
+<div class="bg-surface-container-lowest border border-outline-variant border-l-4 border-l-error rounded-xl p-md shadow-sm">
+<p class="font-label-caps text-label-caps text-error mb-2">A PAGAR (EM ABERTO)</p>
+<p class="font-tabular-nums text-[24px] font-semibold text-error">R$ 150.000,00</p>
+</div>
+<!-- KPI 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-sm flex flex-col justify-center items-center text-center">
+<span class="material-symbols-outlined text-primary mb-1" style="font-size: 28px;">check_circle</span>
+<p class="font-label-caps text-label-caps text-outline">STATUS DE PAGAMENTO</p>
+<p class="font-body-base text-body-base font-medium text-on-surface mt-1">Em Dia</p>
+</div>
+</div>
+<!-- Progress Section (Parcelas) -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+<div class="flex justify-between items-end mb-4">
+<div>
+<h3 class="font-h2 text-h2 text-on-surface">Progresso do Contrato</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Referente à Reforma Sede</p>
+</div>
+<p class="font-tabular-nums text-tabular-nums text-on-surface font-medium">4 de 12 parcelas pagas</p>
+</div>
+<div class="w-full bg-primary-fixed rounded-full h-3 overflow-hidden">
+<div class="bg-primary h-3 rounded-full" style="width: 33.33%"></div>
+</div>
+<div class="flex justify-between mt-2 font-body-sm text-body-sm text-outline">
+<span>Início: Jan 2024</span>
+<span>Fim: Dez 2024</span>
+</div>
+</div>
+<!-- Transaction History Table -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col">
+<div class="p-md border-b border-outline-variant flex justify-between items-center bg-surface-container-lowest">
+<h3 class="font-h2 text-h2 text-on-surface">Histórico de Transações</h3>
+<button class="text-primary font-body-sm text-body-sm font-medium hover:underline">Ver todas</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant sticky top-0">
+<tr>
+<th class="py-3 px-4 font-label-caps text-label-caps text-outline font-semibold">DESCRIÇÃO</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-outline font-semibold">PARCELA</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-outline font-semibold">DATA</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-outline font-semibold text-right">VALOR</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-outline font-semibold text-center">STATUS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant font-body-sm text-body-sm">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-lowest/50 transition-colors">
+<td class="py-3 px-4 text-on-surface font-medium">Reforma Sede - Fase 1</td>
+<td class="py-3 px-4 text-on-surface-variant">04/12</td>
+<td class="py-3 px-4 text-on-surface-variant">10 Abr 2024</td>
+<td class="py-3 px-4 font-tabular-nums text-tabular-nums text-on-surface text-right">R$ 12.500,00</td>
+<td class="py-3 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-caps font-label-caps bg-outline-variant/30 text-on-surface-variant">AGUARDANDO</span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-lowest/50 transition-colors">
+<td class="py-3 px-4 text-on-surface font-medium">Reforma Sede - Fase 1</td>
+<td class="py-3 px-4 text-on-surface-variant">03/12</td>
+<td class="py-3 px-4 text-on-surface-variant">10 Mar 2024</td>
+<td class="py-3 px-4 font-tabular-nums text-tabular-nums text-on-surface text-right">R$ 12.500,00</td>
+<td class="py-3 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-caps font-label-caps bg-primary-container text-primary">PAGO</span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-lowest/50 transition-colors">
+<td class="py-3 px-4 text-on-surface font-medium">Reforma Sede - Fase 1</td>
+<td class="py-3 px-4 text-on-surface-variant">02/12</td>
+<td class="py-3 px-4 text-on-surface-variant">10 Fev 2024</td>
+<td class="py-3 px-4 font-tabular-nums text-tabular-nums text-on-surface text-right">R$ 12.500,00</td>
+<td class="py-3 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-caps font-label-caps bg-primary-container text-primary">PAGO</span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-lowest/50 transition-colors">
+<td class="py-3 px-4 text-on-surface font-medium">Reforma Sede - Fase 1</td>
+<td class="py-3 px-4 text-on-surface-variant">01/12</td>
+<td class="py-3 px-4 text-on-surface-variant">10 Jan 2024</td>
+<td class="py-3 px-4 font-tabular-nums text-tabular-nums text-on-surface text-right">R$ 12.500,00</td>
+<td class="py-3 px-4 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-caps font-label-caps bg-primary-container text-primary">PAGO</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+</body></html>

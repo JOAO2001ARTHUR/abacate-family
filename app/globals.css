@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme {
+  /* Abacate Financial Intelligence - Official Design System */
+  --color-primary: #1f6216;
+  --color-primary-container: #397c2d;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #cdffbb;
+  
+  --color-secondary: #2d6b22;
+  --color-secondary-container: #acf198;
+  --color-on-secondary-container: #327026;
+  
+  --color-tertiary: #90345f;
+  --color-tertiary-container: #ae4c78;
+  
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  
+  --color-background: #f7fbf0;
+  --color-surface: #f7fbf0;
+  --color-surface-dim: #d8dbd1;
+  --color-surface-bright: #f7fbf0;
+  
+  --color-on-surface: #191d16;
+  --color-on-surface-variant: #41493d;
+  
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f1f5ea;
+  --color-surface-container: #ecefe5;
+  --color-surface-container-high: #e6eadf;
+  --color-surface-container-highest: #e0e4d9;
+  
+  --color-outline: #717a6b;
+  --color-outline-variant: #c0c9b9;
+
+  /* Typography */
+  --font-inter: 'Inter', sans-serif;
+  
+  /* Shapes */
+  --radius-sm: 0.125rem;
+  --radius-DEFAULT: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  /* Spacing */
+  --spacing-unit: 4px;
+  --spacing-gutter: 16px;
+  --spacing-margin: 24px;
+  --spacing-stack-sm: 8px;
+  --spacing-stack-md: 16px;
+  --spacing-stack-lg: 32px;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface antialiased;
+    font-family: var(--font-inter);
+  }
+  
+  /* Tabular numbers for financial data */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@utility glass-official {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--color-outline-variant);
+}
+
+@utility card-official {
+  background-color: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-outline-variant);
+  border-radius: var(--radius-lg);
+}
+
+@utility pulse-ring-error {
+  animation: pulse-ring-error 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes pulse-ring-error {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(186, 26, 26, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(186, 26, 26, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(186, 26, 26, 0); }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-container);
+}
