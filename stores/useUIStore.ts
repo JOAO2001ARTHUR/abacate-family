@@ -17,7 +17,7 @@ interface UIStore {
   idSelecionado: string | null;
   setMesAtivo: (mes: string) => void;
   setFiltros: (f: Partial<Filtros>) => void;
-  abrirModal: (tipo: ModalTipo, id?: string) => void;
+  abrirModal: (tipo: ModalTipo, id?: string | null) => void;
   fecharModal: () => void;
 }
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useUIStore } from "@/stores/useUIStore";
-import { X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { X, CheckCircle2, AlertCircle, Loader2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";

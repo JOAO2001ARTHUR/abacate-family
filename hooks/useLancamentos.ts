@@ -11,6 +11,7 @@ export interface Lancamento {
   data_inicio: string;
   categoria_id: string;
   contato_id?: string;
+  local_pagamento_id?: string;
   onde_pagar?: string;
   categoria?: { id: string, nome: string };
   contato?: { id: string, nome: string };

@@ -25,8 +25,15 @@ export interface Ocorrencia {
   } | null;
   numero_parcela?: number;
   total_parcelas?: number;
+  valor_base?: number;
+  tipo: 'FIXA' | 'VARIAVEL' | 'PARCELA';
   onde_pagar?: string;
   regra_id?: string;
+  financeiro_stats?: {
+    total: number;
+    pago: number;
+    restante: number;
+  };
 }
 
 export function useOcorrencias(customFilters?: any) {

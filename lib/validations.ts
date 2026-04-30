@@ -10,6 +10,7 @@ export const schemaLancamento = z.object({
   data_fim: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida").optional(),
   categoria_id: z.string().uuid("Categoria inválida"),
   contato_id: z.string().uuid("Contato inválido").optional(),
+  local_pagamento_id: z.string().uuid("Local de pagamento inválido").optional(),
 }).refine(data => {
   // PARCELA exige total_parcelas, não usa data_fim
   if (data.tipo === 'PARCELA') return !!data.total_parcelas && !data.data_fim;
@@ -19,6 +20,8 @@ export const schemaLancamento = z.object({
   if (data.tipo === 'ESPORADICA') return !data.total_parcelas && !data.data_fim;
   return true;
 }, { message: "Combinação de tipo e campos inválida" });
+
+export type LancamentoInput = z.infer<typeof schemaLancamento>;
 
 export const schemaCategoria = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),

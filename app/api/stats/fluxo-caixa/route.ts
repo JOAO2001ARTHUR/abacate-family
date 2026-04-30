@@ -65,7 +65,7 @@ export async function GET() {
     const mEnd = new Date(m.fim + "T12:00:00");
 
     // Somar ocorrências reais
-    ocorrencias?.forEach(oc => {
+    ocorrencias?.forEach((oc: any) => {
       const v = new Date(oc.data_vencimento + "T12:00:00");
       if (v >= mStart && v <= mEnd) {
         const valor = Number(oc.valor_editado ?? oc.valor);

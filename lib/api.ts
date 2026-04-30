@@ -21,7 +21,7 @@ export const api = {
       headers: {
         "Content-Type": "application/json",
         ...authHeader,
-      },
+      } as any,
     });
 
     if (!response.ok) {
@@ -38,7 +38,7 @@ export const api = {
       headers: {
         "Content-Type": "application/json",
         ...authHeader,
-      },
+      } as any,
       body: JSON.stringify(body),
     });
 
@@ -56,7 +56,7 @@ export const api = {
       headers: {
         "Content-Type": "application/json",
         ...authHeader,
-      },
+      } as any,
       body: JSON.stringify(body),
     });
 
@@ -74,7 +74,7 @@ export const api = {
       headers: {
         "Content-Type": "application/json",
         ...authHeader,
-      },
+      } as any,
     });
 
     if (!response.ok) {

@@ -172,12 +172,10 @@ export default function VariaveisPage() {
                     className="w-12 h-12 rounded-md flex items-center justify-center font-black text-sm shrink-0 border border-outline-variant group-hover:scale-105 transition-transform shadow-sm text-primary-container"
                     style={{ backgroundColor: item.cor ? `${item.cor}20` : 'var(--surface-container-highest)', color: item.cor || 'var(--primary-container)' }}
                   >
-                    {dimensaoAtiva === 'categoria' && item.icone ? (
-                      <span className="material-symbols-outlined">{item.icone}</span>
+                    {(dimensaoAtiva === 'categoria' || dimensaoAtiva === 'recorrencia') && (item as any).icone ? (
+                      <span className="material-symbols-outlined">{(item as any).icone}</span>
                     ) : dimensaoAtiva === 'onde_pagar' ? (
                       <MapPin className="w-5 h-5" />
-                    ) : dimensaoAtiva === 'recorrencia' ? (
-                      <span className="material-symbols-outlined">{item.icone}</span>
                     ) : (
                       item.nome.substring(0, 2).toUpperCase()
                     )}
@@ -218,17 +216,15 @@ export default function VariaveisPage() {
                   <div 
                     className="w-24 h-24 rounded-md flex items-center justify-center text-4xl font-black border-4 shadow-xl"
                     style={{ 
-                      backgroundColor: itemAtivo.cor ? `${itemAtivo.cor}` : 'var(--primary-container)', 
-                      color: itemAtivo.cor ? '#fff' : 'var(--on-primary)',
+                      backgroundColor: (itemAtivo as any).cor ? `${(itemAtivo as any).cor}` : 'var(--primary-container)', 
+                      color: (itemAtivo as any).cor ? '#fff' : 'var(--on-primary)',
                       borderColor: 'var(--surface-container-highest)'
                     }}
                   >
-                    {dimensaoAtiva === 'categoria' && itemAtivo.icone ? (
-                      <span className="material-symbols-outlined text-5xl">{itemAtivo.icone}</span>
+                    {(dimensaoAtiva === 'categoria' || dimensaoAtiva === 'recorrencia') && (itemAtivo as any).icone ? (
+                      <span className="material-symbols-outlined text-5xl">{(itemAtivo as any).icone}</span>
                     ) : dimensaoAtiva === 'onde_pagar' ? (
                       <MapPin className="w-10 h-10" />
-                    ) : dimensaoAtiva === 'recorrencia' ? (
-                      <span className="material-symbols-outlined text-5xl">{itemAtivo.icone}</span>
                     ) : (
                       itemAtivo.nome.substring(0, 2).toUpperCase()
                     )}
