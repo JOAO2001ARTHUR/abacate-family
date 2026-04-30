@@ -125,7 +125,7 @@ export async function GET(request: Request) {
           const { data: updatedData } = await query.order("data_vencimento", { ascending: true });
           if (updatedData) {
             // Re-mapeia e retorna os dados atualizados
-            const syncLancamentoIds = [...new Set(updatedData.map((oc: any) => oc.lancamento_id))];
+    const syncLancamentoIds = Array.from(new Set(updatedData.map((oc: any) => oc.lancamento_id)));
             const { data: syncRelated } = await supabase
               .from("ocorrencias")
               .select("lancamento_id, valor, valor_editado, status")
@@ -171,7 +171,7 @@ export async function GET(request: Request) {
   }
 
   // --- Add Financial Stats for Parcelados ---
-  const lancamentoIds = [...new Set(data.map((oc: any) => oc.lancamento_id))];
+  const lancamentoIds = Array.from(new Set(data.map((oc: any) => oc.lancamento_id)));
   const { data: allRelated } = await supabase
     .from("ocorrencias")
     .select("lancamento_id, valor, valor_editado, status")
