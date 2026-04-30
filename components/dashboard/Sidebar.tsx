@@ -5,13 +5,12 @@ import { usePathname } from "next/navigation";
 import { 
   LayoutDashboard, 
   ArrowLeftRight, 
-  Tags, 
-  Users, 
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  LayoutGrid
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -19,8 +18,7 @@ import { useState } from "react";
 const menuItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Lançamentos", href: "/lancamentos", icon: ArrowLeftRight },
-  { name: "Categorias", href: "/categorias", icon: Tags },
-  { name: "Contatos", href: "/contatos", icon: Users },
+  { name: "Variáveis", href: "/variaveis", icon: LayoutGrid },
 ];
 
 export function Sidebar() {

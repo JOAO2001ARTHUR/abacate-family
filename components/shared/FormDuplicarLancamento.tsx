@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useContatos } from "@/hooks/useContatos";
 import { useLocaisPagamento } from "@/hooks/useLocaisPagamento";
+import { useLancamento } from "@/hooks/useLancamentos";
 import { createClient } from "@/utils/supabase/client";
 import { useUIStore } from "@/stores/useUIStore";
 import { useQueryClient } from "@tanstack/react-query";
@@ -20,14 +21,15 @@ import {
 import { cn } from "@/lib/utils";
 import { FormCriarCategoriaInline, FormCriarContatoInline, FormCriarLocalPagamentoInline } from "./FormEntidadesInline";
 
-export function FormCriarLancamento() {
+export function FormDuplicarLancamento() {
   const supabase = createClient();
   const queryClient = useQueryClient();
-  const { fecharModal } = useUIStore();
+  const { fecharModal, idSelecionado } = useUIStore();
   
   const { data: categorias } = useCategorias();
   const { data: contatos } = useContatos();
   const { data: locaisPagamento } = useLocaisPagamento();
+  const { data: lancamento, isLoading: isLoadingLanc } = useLancamento(idSelecionado || "");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,8 +48,23 @@ export function FormCriarLancamento() {
   const [valorBase, setValorBase] = useState("");
   const [dataInicio, setDataInicio] = useState(new Date().toISOString().split('T')[0]);
   const [totalParcelas, setTotalParcelas] = useState("1");
-
   const [localPagamentoId, setLocalPagamentoId] = useState("");
+
+  useEffect(() => {
+    if (lancamento) {
+      setNome(`${lancamento.nome} (Cópia)`);
+      setNatureza(lancamento.natureza);
+      setCategoriaId(lancamento.categoria_id);
+      setContatoId(lancamento.contato_id || "");
+      setValorBase(lancamento.valor_base.toString());
+      setTipo(lancamento.tipo);
+      setTotalParcelas(lancamento.total_parcelas?.toString() || "1");
+      setLocalPagamentoId(lancamento.local_pagamento_id || "");
+      // Keep data_inicio as today, or original data_inicio? Original date might be confusing. 
+      // We will set it to today, so the user knows they are creating a new one starting now.
+      setDataInicio(new Date().toISOString().split('T')[0]);
+    }
+  }, [lancamento]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +79,7 @@ export function FormCriarLancamento() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado.");
 
-      const { data: lancamento, error: lError } = await supabase
+      const { data: novoLancamento, error: lError } = await supabase
         .from("lancamentos")
         .insert({
           user_id: user.id,
@@ -89,7 +106,7 @@ export function FormCriarLancamento() {
         dataVenc.setMonth(dataVenc.getMonth() + i);
         
         ocorrenciasData.push({
-          lancamento_id: lancamento.id,
+          lancamento_id: novoLancamento.id,
           numero_parcela: tipo === "PARCELA" ? i + 1 : null,
           data_vencimento: dataVenc.toISOString().split('T')[0],
           data_competencia: dataVenc.toISOString().split('T')[0],
@@ -109,6 +126,15 @@ export function FormCriarLancamento() {
       setLoading(false);
     }
   };
+
+  if (isLoadingLanc) {
+    return (
+      <div className="py-20 flex flex-col items-center justify-center gap-4 text-outline animate-pulse">
+        <Loader2 className="w-10 h-10 animate-spin" />
+        <p className="text-xs font-black uppercase tracking-widest">Carregando Lançamento...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-[500px]">
@@ -200,7 +226,7 @@ export function FormCriarLancamento() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Data de Início</label>
+              <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Data de Início da Cópia</label>
               <div className="relative">
                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" />
                 <input 
@@ -326,7 +352,7 @@ export function FormCriarLancamento() {
             disabled={loading}
             className="w-full bg-primary-container text-on-primary py-4 rounded-xl font-black text-sm flex items-center justify-center gap-3 hover:opacity-90 transition-all shadow-xl disabled:opacity-50"
           >
-            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Criar Lançamento <ArrowRight className="w-5 h-5" /></>}
+            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Criar Cópia <ArrowRight className="w-5 h-5" /></>}
           </button>
         </form>
       )}

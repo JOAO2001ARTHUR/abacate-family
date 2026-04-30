@@ -15,8 +15,7 @@ import {
   Calendar,
   LayoutDashboard,
   ArrowLeftRight,
-  Tags,
-  Users,
+  LayoutGrid,
   LogOut,
   User as UserIcon
 } from "lucide-react";
@@ -50,8 +49,7 @@ export default function DashboardLayout({
   const navItems = [
     { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" /> },
     { label: "Entradas e Saídas", href: "/lancamentos", icon: <ArrowLeftRight className="w-5 h-5" /> },
-    { label: "Categorias", href: "/categorias", icon: <Tags className="w-5 h-5" /> },
-    { label: "Contatos", href: "/contatos", icon: <Users className="w-5 h-5" /> },
+    { label: "Variáveis", href: "/variaveis", icon: <LayoutGrid className="w-5 h-5" /> },
   ];
 
   return (
@@ -162,8 +160,8 @@ export default function DashboardLayout({
         </header>
 
         {/* Main Scrollable Canvas */}
-        <main className="flex-1 overflow-y-auto p-8 bg-background">
-          <div className="max-w-[1440px] mx-auto">
+        <main className="flex-1 overflow-y-auto p-4 md:p-12 bg-background">
+          <div className="max-w-[1920px] mx-auto">
             {children}
           </div>
         </main>

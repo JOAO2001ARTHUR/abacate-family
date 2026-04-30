@@ -8,6 +8,7 @@ export interface Ocorrencia {
   valor: number;
   valor_editado?: number | null;
   data_vencimento: string;
+  data_competencia: string;
   status?: 'PENDENTE' | 'BAIXADA';
   status_pago?: boolean;
   natureza: 'ENTRADA' | 'SAIDA';
@@ -24,6 +25,7 @@ export interface Ocorrencia {
   } | null;
   numero_parcela?: number;
   total_parcelas?: number;
+  onde_pagar?: string;
   regra_id?: string;
 }
 
@@ -38,6 +40,14 @@ export function useOcorrencias(customFilters?: any) {
   return useQuery({
     queryKey: ['ocorrencias', finalFilters],
     queryFn: () => api.get<Ocorrencia[]>('/ocorrencias', finalFilters),
+    staleTime: 1000 * 60, // 1 minuto
+  });
+}
+
+export function useContasAtrasadas() {
+  return useQuery({
+    queryKey: ['ocorrencias', 'atrasadas'],
+    queryFn: () => api.get<Ocorrencia[]>('/ocorrencias', { atrasadas: 'true' }),
     staleTime: 1000 * 60, // 1 minuto
   });
 }

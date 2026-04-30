@@ -23,7 +23,8 @@ interface Props {
 }
 
 export function ModalEscopoEdicao({ lancamentoId, tipoLancamento, dados, onBack }: Props) {
-  const { idSelecionado: idOcorrenciaRef, fecharModal } = useUIStore();
+  const { idSelecionado, fecharModal } = useUIStore();
+  const [, idOcorrenciaRef] = (idSelecionado || "").split(":");
   const updateLancamento = useUpdateLancamento();
   
   const [escopo, setEscopo] = useState<string>("ESTE_E_PROXIMOS");

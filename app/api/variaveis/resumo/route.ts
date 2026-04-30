@@ -2,11 +2,15 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const dimensao = searchParams.get("dimensao");
+  const id = searchParams.get("id");
+
+  if (!dimensao || !id) {
+    return NextResponse.json({ error: "Missing dimensao or id parameters" }, { status: 400 });
+  }
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
@@ -16,8 +20,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Buscar todas as ocorrências vinculadas aos lançamentos deste contato
-  const { data, error } = await supabase
+  let query = supabase
     .from("ocorrencias")
     .select(`
       id,
@@ -34,13 +37,29 @@ export async function GET(
         total_parcelas,
         natureza,
         contato_id,
+        categoria_id,
+        local_pagamento_id,
         user_id,
         valor_base
       )
     `)
-    .eq("lancamento.contato_id", id)
     .eq("lancamento.user_id", user.id)
     .order("data_vencimento", { ascending: false });
+
+  // Aplicar filtro baseado na dimensão
+  if (dimensao === 'contato') {
+    query = query.eq("lancamento.contato_id", id);
+  } else if (dimensao === 'categoria') {
+    query = query.eq("lancamento.categoria_id", id);
+  } else if (dimensao === 'onde_pagar') {
+    query = query.eq("lancamento.local_pagamento_id", id);
+  } else if (dimensao === 'recorrencia') {
+    query = query.eq("lancamento.tipo", id);
+  } else {
+    return NextResponse.json({ error: "Invalid dimensao" }, { status: 400 });
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

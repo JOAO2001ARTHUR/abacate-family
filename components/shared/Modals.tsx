@@ -8,7 +8,9 @@ import { createClient } from "@/utils/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { FormCriarLancamento } from "./FormCriarLancamento";
 import { FormEditarLancamento } from "./FormEditarLancamento";
-import { FormCriarCategoria, FormCriarContato } from "./FormEntidadesStandalone";
+import { FormDuplicarLancamento } from "./FormDuplicarLancamento";
+import { FormCategoria, FormContato, FormLocalPagamento } from "./FormEntidadesStandalone";
+import { ModalExcluirLancamento } from "./ModalExcluirLancamento";
 
 export function Modals() {
   const { modalAberto, fecharModal, idSelecionado } = useUIStore();
@@ -18,7 +20,7 @@ export function Modals() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!modalAberto) return null;
+  if (!modalAberto || ['DETALHES_MES_CONTATO', 'DETALHES_PAGOS_CONTATO', 'DETALHES_PENDENTES_CONTATO'].includes(modalAberto)) return null;
 
   const handleConfirmarBaixa = async () => {
     if (!idSelecionado) return;
@@ -34,6 +36,33 @@ export function Modals() {
           data_baixa: new Date().toISOString().split('T')[0],
           baixado_por: user?.id,
           baixado_em: new Date().toISOString()
+        })
+        .eq("id", idSelecionado);
+
+      if (updateError) throw updateError;
+
+      // Sucesso
+      queryClient.invalidateQueries({ queryKey: ["ocorrencias"] });
+      fecharModal();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmarDesbaixa = async () => {
+    if (!idSelecionado) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const { error: updateError } = await supabase
+        .from("ocorrencias")
+        .update({ 
+          status: "PENDENTE",
+          data_baixa: null,
+          baixado_por: null,
+          baixado_em: null
         })
         .eq("id", idSelecionado);
 
@@ -76,8 +105,11 @@ export function Modals() {
 
           {modalAberto === 'CRIAR_LANCAMENTO' && <FormCriarLancamento />}
           {modalAberto === 'EDITAR_LANCAMENTO' && <FormEditarLancamento />}
-          {modalAberto === 'CRIAR_CATEGORIA' && <FormCriarCategoria />}
-          {modalAberto === 'CRIAR_CONTATO' && <FormCriarContato />}
+          {modalAberto === 'DUPLICAR_LANCAMENTO' && <FormDuplicarLancamento />}
+          {(modalAberto === 'CRIAR_CATEGORIA' || modalAberto === 'EDITAR_CATEGORIA') && <FormCategoria />}
+          {(modalAberto === 'CRIAR_CONTATO' || modalAberto === 'EDITAR_CONTATO') && <FormContato />}
+          {(modalAberto === 'CRIAR_LOCAL_PAGAMENTO' || modalAberto === 'EDITAR_LOCAL_PAGAMENTO') && <FormLocalPagamento />}
+          {modalAberto === 'EXCLUIR_LANCAMENTO' && <ModalExcluirLancamento />}
 
           {modalAberto === 'BAIXAR' && (
             <div className="space-y-6 text-center">
@@ -107,7 +139,35 @@ export function Modals() {
             </div>
           )}
 
-          {![ 'BAIXAR', 'CRIAR_LANCAMENTO', 'CRIAR_CATEGORIA', 'CRIAR_CONTATO' ].includes(modalAberto) && (
+          {modalAberto === 'DESBAIXAR' && (
+            <div className="space-y-6 text-center">
+              <div className="w-20 h-20 bg-amber-500/10 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+                <RotateCcw className="w-10 h-10" />
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-2xl font-black text-on-surface tracking-tighter">Reverter Baixa?</h4>
+                <p className="text-on-surface-variant font-medium">Você está desmarcando o pagamento desta conta. O status voltará para "Pendente".</p>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button 
+                  onClick={fecharModal}
+                  disabled={loading}
+                  className="flex-1 px-6 py-3 border border-outline-variant rounded-md font-bold text-on-surface hover:bg-surface-container-low transition-all disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={handleConfirmarDesbaixa}
+                  disabled={loading}
+                  className="flex-1 px-6 py-3 bg-amber-600 text-white rounded-md font-bold hover:opacity-90 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Reversão"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!['BAIXAR', 'DESBAIXAR', 'EXCLUIR_LANCAMENTO', 'CRIAR_LANCAMENTO', 'EDITAR_LANCAMENTO', 'DUPLICAR_LANCAMENTO', 'CRIAR_CATEGORIA', 'EDITAR_CATEGORIA', 'CRIAR_CONTATO', 'EDITAR_CONTATO', 'CRIAR_LOCAL_PAGAMENTO', 'EDITAR_LOCAL_PAGAMENTO'].includes(modalAberto) && (
             <div className="py-12 text-center space-y-4">
               <AlertCircle className="w-12 h-12 text-outline mx-auto" />
               <p className="font-bold text-on-surface-variant">Este formulário ({modalAberto}) está sendo preparado.</p>

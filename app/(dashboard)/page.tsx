@@ -1,6 +1,6 @@
 "use client";
 
-import { useOcorrencias, calcularStatusReal } from "@/hooks/useOcorrencias";
+import { useOcorrencias, useContasAtrasadas, calcularStatusReal } from "@/hooks/useOcorrencias";
 import { formatarMoeda } from "@/lib/utils";
 import { 
   TrendingUp, 
@@ -14,13 +14,46 @@ import {
   ArrowDown,
   ArrowUp
 } from "lucide-react";
+import { useUIStore } from "@/stores/useUIStore";
 import { cn } from "@/lib/utils";
+import { useFluxoCaixa } from "@/hooks/useFluxoCaixa";
+import { 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer 
+} from 'recharts';
+
+const renderLabelEntradas = (props: any) => {
+  const { x, y, value } = props;
+  if (!value && value !== 0) return null;
+  return (
+    <text x={x} y={y - 12} fill="var(--color-primary-container)" fontSize={10} fontWeight="900" textAnchor="middle" className="tnum">
+      {formatarMoeda(value)}
+    </text>
+  );
+};
+
+const renderLabelSaidas = (props: any) => {
+  const { x, y, value } = props;
+  if (!value && value !== 0) return null;
+  return (
+    <text x={x} y={y + 20} fill="var(--color-error)" fontSize={10} fontWeight="900" textAnchor="middle" className="tnum">
+      {formatarMoeda(value)}
+    </text>
+  );
+};
 
 export default function DashboardPage() {
   const { data: ocorrencias, isLoading } = useOcorrencias();
+  const { data: contasAtrasadas } = useContasAtrasadas();
+  const { data: fluxoData, isLoading: isLoadingFluxo } = useFluxoCaixa();
 
-  // Filtrar em atraso (Urgency Zone)
-  const emAtraso = ocorrencias?.filter(oc => calcularStatusReal(oc) === 'ATRASADA') || [];
+  // Filtrar em atraso (Urgency Zone) - Agora pega de todos os meses
+  const emAtraso = contasAtrasadas || [];
   
   // Próximos 7 dias (Horizon Zone)
   const hoje = new Date();
@@ -61,8 +94,8 @@ export default function DashboardPage() {
             </h2>
           </div>
 
-          <div className="flex flex-col gap-3">
-            {emAtraso.slice(0, 3).map((oc) => (
+          <div className="flex flex-col gap-3 max-h-[320px] overflow-y-auto pr-2">
+            {emAtraso.map((oc) => (
               <div key={oc.id} className="flex items-center justify-between bg-surface-container-lowest p-5 rounded-md shadow-sm border border-error/10">
                 <div className="flex items-center gap-5">
                   <div className="w-12 h-12 rounded-md bg-error-container/40 flex items-center justify-center text-error">
@@ -138,25 +171,99 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-stack-lg">
           <div className="bg-surface-container-lowest border border-outline-variant rounded-md p-8 shadow-sm lg:col-span-2">
             <div className="flex items-center justify-between mb-10 border-b border-outline-variant pb-6">
-              <h3 className="font-bold text-on-surface">Fluxo de Caixa (Últimos 6 meses)</h3>
-              <button className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2 hover:underline">
-                Ver Relatório <ExternalLink className="w-3 h-3" />
-              </button>
+              <h3 className="font-bold text-on-surface">Fluxo de Caixa (Projeção 7 Meses)</h3>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-primary-container" />
+                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Entradas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-error" />
+                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">Saídas</span>
+                </div>
+                <button className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2 hover:underline ml-4">
+                  Ver Relatório <ExternalLink className="w-3 h-3" />
+                </button>
+              </div>
             </div>
-            <div className="h-64 flex items-end justify-between px-8 gap-8">
-              {ocorrencias && ocorrencias.length > 0 ? (
-                // Lógica de agrupamento por mês viria aqui, por enquanto placeholder de zeros
-                [0, 0, 0, 0, 0, 0].map((val, i) => (
-                  <div key={i} className="flex flex-col items-center gap-4 flex-1 h-full">
-                    <div className="w-full flex gap-1 items-end justify-center h-full">
-                      <div className="w-4 bg-primary-container/20 rounded-sm" style={{ height: `10%` }} />
-                      <div className="w-4 bg-error/20 rounded-sm" style={{ height: `10%` }} />
-                    </div>
-                    <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-tighter">...</span>
-                  </div>
-                ))
+            <div className="h-64 w-full">
+              {isLoadingFluxo ? (
+                <div className="w-full h-full flex items-center justify-center animate-pulse">
+                  <div className="text-[10px] font-black text-outline uppercase tracking-widest">Calculando Fluxo...</div>
+                </div>
+              ) : fluxoData && fluxoData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={fluxoData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-outline-variant)" opacity={0.2} />
+                    <XAxis 
+                      dataKey="label" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: 'var(--color-on-surface-variant)', fontSize: 10, fontWeight: 800 }}
+                      dy={10}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fill: 'var(--color-on-surface-variant)', fontSize: 10, fontWeight: 500 }}
+                    />
+                    <Tooltip 
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-surface-container-highest border border-outline-variant p-4 rounded-lg shadow-2xl backdrop-blur-md">
+                              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-3 border-b border-outline-variant pb-2">{label}</p>
+                              <div className="space-y-2">
+                                <div className="flex justify-between gap-8 items-center">
+                                  <span className="text-[10px] font-bold text-primary-container uppercase tracking-tight">Entradas</span>
+                                  <span className="text-sm font-black text-on-surface tnum">{formatarMoeda(payload[0].value as number)}</span>
+                                </div>
+                                <div className="flex justify-between gap-8 items-center">
+                                  <span className="text-[10px] font-bold text-error uppercase tracking-tight">Saídas</span>
+                                  <span className="text-sm font-black text-on-surface tnum">{formatarMoeda(payload[1].value as number)}</span>
+                                </div>
+                                <div className="flex justify-between gap-8 items-center pt-2 border-t border-outline-variant">
+                                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-tight">Saldo</span>
+                                  <span className={cn(
+                                    "text-sm font-black tnum",
+                                    ((payload[0].value as number) - (payload[1].value as number)) >= 0 ? "text-primary-container" : "text-error"
+                                  )}>
+                                    {formatarMoeda((payload[0].value as number) - (payload[1].value as number))}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="entradas" 
+                      stroke="var(--color-primary-container)" 
+                      strokeWidth={4} 
+                      dot={{ r: 4, fill: 'var(--color-primary-container)', strokeWidth: 2, stroke: '#fff' }}
+                      activeDot={{ r: 6, strokeWidth: 0 }}
+                      animationDuration={1500}
+                      connectNulls={true}
+                      label={renderLabelEntradas}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="saidas" 
+                      stroke="var(--color-error)" 
+                      strokeWidth={4} 
+                      dot={{ r: 4, fill: 'var(--color-error)', strokeWidth: 2, stroke: '#fff' }}
+                      activeDot={{ r: 6, strokeWidth: 0 }}
+                      animationDuration={1500}
+                      connectNulls={true}
+                      label={renderLabelSaidas}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               ) : (
-                <div className="w-full flex items-center justify-center text-on-surface-variant font-medium opacity-40">
+                <div className="w-full h-full flex items-center justify-center text-on-surface-variant font-medium opacity-40">
                   Aguardando movimentações para gerar gráfico
                 </div>
               )}

@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "vercel": {
+      "type": "remote",
+      "url": "https://mcp.vercel.com",
+      "enabled": true
+    },
+    "supabase": {
+      "type": "remote",
+      "url": "https://mcp.supabase.com",
+      "enabled": true
+    }
+  }
+}

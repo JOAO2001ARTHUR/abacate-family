@@ -1,0 +1,16 @@
+{
+  "context_servers": {
+    "vercel": {
+      "source": "custom",
+      "type": "http",
+      "url": "https://mcp.vercel.com",
+      "headers": {}
+    },
+    "supabase": {
+      "source": "custom",
+      "type": "http",
+      "url": "https://mcp.supabase.com",
+      "headers": {}
+    }
+  }
+}

@@ -173,3 +173,64 @@ export function FormCriarContatoInline({ onSucesso, onCancelar }: { onSucesso: (
     </div>
   );
 }
+// --- FORM LOCAL PAGAMENTO (INLINE) ---
+export function FormCriarLocalPagamentoInline({ onSucesso, onCancelar }: { onSucesso: (id: string) => void, onCancelar: () => void }) {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  const [nome, setNome] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from("locais_pagamento")
+        .insert({ user_id: user?.id, nome })
+        .select()
+        .single();
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["locais_pagamento"] });
+      onSucesso(data.id);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="absolute inset-0 bg-surface-container-lowest z-10 flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="p-6 border-b border-outline-variant flex justify-between items-center">
+        <h3 className="text-xl font-black text-on-surface tracking-tight uppercase">Novo Local de Pagamento</h3>
+        <button onClick={onCancelar} className="p-2 hover:bg-surface-container-low rounded-full transition-colors">
+          <X className="w-5 h-5 text-on-surface-variant" />
+        </button>
+      </div>
+
+      <div className="p-10 space-y-10 flex-1">
+        <div className="space-y-3">
+          <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Nome do Banco ou Carteira</label>
+          <input 
+            autoFocus
+            placeholder="Ex: Nubank, Itaú, Dinheiro..."
+            value={nome}
+            onChange={e => setNome(e.target.value)}
+            className="w-full px-5 py-4 bg-background border border-primary/40 rounded-md text-base font-medium outline-none focus:border-primary transition-all"
+          />
+        </div>
+      </div>
+
+      <div className="p-10">
+        <button 
+          onClick={handleSubmit} 
+          disabled={loading || !nome} 
+          className="w-full bg-primary text-on-primary py-5 rounded-xl font-black text-base flex justify-center items-center gap-3 shadow-xl hover:opacity-90 transition-all disabled:opacity-50"
+        >
+          {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>Salvar Local <Plus className="w-5 h-5" /></>}
+        </button>
+      </div>
+    </div>
+  );
+}
