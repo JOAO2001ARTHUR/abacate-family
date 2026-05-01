@@ -53,8 +53,8 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="bg-background text-on-surface min-h-screen flex antialiased overflow-hidden">
-      {/* SideNavBar - Official Style */}
+    <div className="bg-background text-on-surface min-h-screen flex antialiased overflow-hidden relative">
+      {/* SideNavBar - Official Style (Desktop Only) */}
       <aside className="bg-surface-container-low border-r border-outline-variant h-screen w-64 fixed left-0 top-0 z-50 flex flex-col py-6 hidden md:flex">
         <div className="px-6 mb-8">
           <div className="text-2xl font-black text-primary tracking-tighter flex items-center gap-2">
@@ -128,31 +128,47 @@ export default function DashboardLayout({
 
       {/* Main Content Wrapper */}
       <div className="flex-1 flex flex-col md:ml-64 h-screen overflow-hidden">
-        {/* TopAppBar - Official Style */}
-        <header className="bg-surface-container-lowest/90 backdrop-blur-md flex justify-between items-center h-16 px-8 w-full sticky top-0 z-40 border-b border-outline-variant">
-          {/* Search Bar on Left */}
-          <div className="flex items-center bg-surface-container-low rounded-md px-4 py-2 w-96 group focus-within:ring-1 focus-within:ring-primary transition-all border border-transparent focus-within:border-primary">
-            <Search className="w-4 h-4 text-outline mr-3" />
-            <input 
-              type="text" 
-              placeholder="Search transactions, contacts..." 
-              className="bg-transparent border-none focus:ring-0 text-sm font-medium text-on-surface w-full p-0 placeholder:text-outline"
-            />
+        {/* TopAppBar - Responsive Style */}
+        <header className="bg-surface-container-lowest/90 backdrop-blur-md flex justify-between items-center h-16 px-4 md:px-8 w-full sticky top-0 z-40 border-b border-outline-variant">
+          {/* Logo on Mobile / Search on Desktop */}
+          <div className="flex items-center gap-4 flex-1">
+            <div className="text-xl font-black text-primary tracking-tighter flex md:hidden items-center gap-1">
+              <span>Abacate</span>
+              <span className="text-lg">🥑</span>
+            </div>
+
+            <div className="hidden md:flex items-center bg-surface-container-low rounded-md px-4 py-2 w-full max-w-md group focus-within:ring-1 focus-within:ring-primary transition-all border border-transparent focus-within:border-primary">
+              <Search className="w-4 h-4 text-outline mr-3" />
+              <input 
+                type="text" 
+                placeholder="Search transactions, contacts..." 
+                className="bg-transparent border-none focus:ring-0 text-sm font-medium text-on-surface w-full p-0 placeholder:text-outline"
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 text-primary font-bold text-sm cursor-pointer hover:opacity-80 transition-opacity">
-              <span>{new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+          <div className="flex items-center gap-3 md:gap-6">
+            <div className="hidden sm:flex items-center gap-2 text-primary font-bold text-xs md:text-sm cursor-pointer hover:opacity-80 transition-opacity">
+              <span>{new Date().toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}</span>
               <Calendar className="w-4 h-4" />
             </div>
             
-            <div className="h-6 w-px bg-outline-variant" />
+            <div className="hidden sm:block h-6 w-px bg-outline-variant" />
             
-            <div className="flex items-center gap-4">
-              <button className="text-on-surface-variant hover:text-on-surface transition-colors">
+            <div className="flex items-center gap-2 md:gap-4">
+              <button className="md:hidden text-on-surface-variant p-2">
+                <Search className="w-5 h-5" />
+              </button>
+              <button className="text-on-surface-variant hover:text-on-surface transition-colors p-2">
                 <Bell className="w-5 h-5" />
               </button>
-              <button className="text-on-surface-variant hover:text-on-surface transition-colors">
+              <button 
+                onClick={handleLogout}
+                className="md:hidden text-on-surface-variant p-2"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+              <button className="hidden md:block text-on-surface-variant hover:text-on-surface transition-colors">
                 <Settings className="w-5 h-5" />
               </button>
             </div>
@@ -160,14 +176,69 @@ export default function DashboardLayout({
         </header>
 
         {/* Main Scrollable Canvas */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-12 bg-background">
+        <main className="flex-1 overflow-y-auto p-4 md:p-12 bg-background pb-24 md:pb-12">
           <div className="max-w-[1920px] mx-auto">
             {children}
           </div>
         </main>
       </div>
 
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface-container-lowest/95 backdrop-blur-lg border-t border-outline-variant h-20 px-6 flex items-center justify-between z-[60] safe-area-bottom">
+        {navItems.slice(0, 2).map((item) => {
+          const active = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center gap-1 transition-all duration-200",
+                active ? "text-primary" : "text-on-surface-variant opacity-60"
+              )}
+            >
+              <div className={cn("p-1 rounded-md", active && "bg-primary/10")}>
+                {item.icon}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-tighter">{item.label.split(' ')[0]}</span>
+            </Link>
+          );
+        })}
+
+        {/* Floating Action Button (Mobile) */}
+        <button 
+          onClick={() => abrirModal('CRIAR_LANCAMENTO')}
+          className="bg-primary text-on-primary w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg -translate-y-6 border-4 border-background transition-transform active:scale-95"
+        >
+          <Plus className="w-7 h-7" />
+        </button>
+
+        <Link
+          href="/variaveis"
+          className={cn(
+            "flex flex-col items-center gap-1 transition-all duration-200",
+            pathname === "/variaveis" ? "text-primary" : "text-on-surface-variant opacity-60"
+          )}
+        >
+          <div className={cn("p-1 rounded-md", pathname === "/variaveis" && "bg-primary/10")}>
+            <LayoutGrid className="w-5 h-5" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-tighter">Variáveis</span>
+        </Link>
+
+        <button 
+          onClick={() => {}} // Could be a settings or profile modal
+          className="flex flex-col items-center gap-1 text-on-surface-variant opacity-60"
+        >
+          <div className="w-6 h-6 rounded-md bg-surface-container-highest flex items-center justify-center border border-outline-variant">
+            <UserIcon className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-tighter">Perfil</span>
+        </button>
+      </nav>
+
       <Modals />
     </div>
+  );
+}
   );
 }

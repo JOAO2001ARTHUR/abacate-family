@@ -301,38 +301,67 @@ export default function DashboardPage() {
           <button className="text-[10px] font-black text-primary-container uppercase tracking-widest hover:underline">Ver Todos</button>
         </div>
         <div className="bg-surface-container-lowest border border-outline-variant rounded-md overflow-hidden shadow-sm">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-surface-container-low border-b border-outline-variant text-[10px] font-black text-on-surface-variant uppercase tracking-widest">
-                <th className="px-8 py-4">Descrição</th>
-                <th className="px-8 py-4">Categoria</th>
-                <th className="px-8 py-4">Data</th>
-                <th className="px-8 py-4 text-right">Valor</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-outline-variant">
-              {proximos.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-12 text-center text-on-surface-variant font-medium opacity-40 italic">
-                    Nenhum vencimento programado para os próximos 7 dias.
-                  </td>
+          {/* Desktop Table View */}
+          <div className="hidden md:block">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-surface-container-low border-b border-outline-variant text-[10px] font-black text-on-surface-variant uppercase tracking-widest">
+                  <th className="px-8 py-4">Descrição</th>
+                  <th className="px-8 py-4">Categoria</th>
+                  <th className="px-8 py-4">Data</th>
+                  <th className="px-8 py-4 text-right">Valor</th>
                 </tr>
-              ) : (
-                proximos.map((item) => (
-                  <tr key={item.id} className="hover:bg-surface-container-low transition-colors group">
-                    <td className="px-8 py-4 font-bold text-on-surface text-sm">{item.nome}</td>
-                    <td className="px-8 py-4">
-                      <span className="bg-primary-fixed/50 text-on-primary-fixed-variant px-3 py-1 rounded-sm text-[10px] font-bold border border-primary-fixed">
-                        {item.categoria?.nome || 'Geral'}
-                      </span>
+              </thead>
+              <tbody className="divide-y divide-outline-variant">
+                {proximos.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-12 text-center text-on-surface-variant font-medium opacity-40 italic">
+                      Nenhum vencimento programado para os próximos 7 dias.
                     </td>
-                    <td className="px-8 py-4 text-xs font-bold text-on-surface-variant">{new Date(item.data_vencimento).toLocaleDateString()}</td>
-                    <td className="px-8 py-4 text-right font-black text-on-surface tnum">{formatarMoeda(item.valor_editado ?? item.valor)}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  proximos.map((item) => (
+                    <tr key={item.id} className="hover:bg-surface-container-low transition-colors group">
+                      <td className="px-8 py-4 font-bold text-on-surface text-sm">{item.nome}</td>
+                      <td className="px-8 py-4">
+                        <span className="bg-primary-fixed/50 text-on-primary-fixed-variant px-3 py-1 rounded-sm text-[10px] font-bold border border-primary-fixed">
+                          {item.categoria?.nome || 'Geral'}
+                        </span>
+                      </td>
+                      <td className="px-8 py-4 text-xs font-bold text-on-surface-variant">{new Date(item.data_vencimento).toLocaleDateString()}</td>
+                      <td className="px-8 py-4 text-right font-black text-on-surface tnum">{formatarMoeda(item.valor_editado ?? item.valor)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden divide-y divide-outline-variant">
+            {proximos.length === 0 ? (
+              <div className="p-12 text-center text-on-surface-variant font-medium opacity-40 italic text-sm">
+                Nenhum vencimento programado.
+              </div>
+            ) : (
+              proximos.map((item) => (
+                <div key={item.id} className="p-5 flex flex-col gap-3 active:bg-surface-container-low transition-colors">
+                  <div className="flex justify-between items-start">
+                    <span className="font-bold text-on-surface text-sm">{item.nome}</span>
+                    <span className="font-black text-on-surface tnum text-base">{formatarMoeda(item.valor_editado ?? item.valor)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="bg-primary-fixed/50 text-on-primary-fixed-variant px-2 py-0.5 rounded-sm text-[9px] font-black uppercase tracking-tighter border border-primary-fixed">
+                      {item.categoria?.nome || 'Geral'}
+                    </span>
+                    <span className="text-[10px] font-bold text-on-surface-variant">
+                      Vence em {new Date(item.data_vencimento).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </section>
     </div>
