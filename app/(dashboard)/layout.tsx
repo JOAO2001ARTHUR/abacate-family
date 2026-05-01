@@ -17,7 +17,9 @@ import {
   ArrowLeftRight,
   LayoutGrid,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Menu,
+  X
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -31,6 +33,7 @@ export default function DashboardLayout({
   const { abrirModal } = useUIStore();
   
   const [user, setUser] = useState<any>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -54,15 +57,34 @@ export default function DashboardLayout({
 
   return (
     <div className="bg-background text-on-surface min-h-screen flex antialiased overflow-hidden relative">
-      {/* SideNavBar - Official Style (Desktop Only) */}
-      <aside className="bg-surface-container-low border-r border-outline-variant h-screen w-64 fixed left-0 top-0 z-50 flex flex-col py-6 hidden md:flex">
-        <div className="px-6 mb-8">
-          <div className="text-2xl font-black text-primary tracking-tighter flex items-center gap-2">
-            <span>Abacate</span>
-            <span className="text-xl">🥑</span>
-            <span>Family</span>
+      {/* Overlay for Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-on-surface/40 backdrop-blur-sm z-[70] md:hidden animate-in fade-in duration-300"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* SideNavBar - Drawer on Mobile, Fixed on Desktop */}
+      <aside className={cn(
+        "bg-surface-container-low border-r border-outline-variant h-screen w-64 fixed left-0 top-0 z-[80] flex flex-col py-6 transition-transform duration-300 md:translate-x-0",
+        isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:flex"
+      )}>
+        <div className="px-6 mb-8 flex items-center justify-between">
+          <div>
+            <div className="text-2xl font-black text-primary tracking-tighter flex items-center gap-2">
+              <span>Abacate</span>
+              <span className="text-xl">🥑</span>
+              <span>Family</span>
+            </div>
+            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-1 opacity-60">Financial Intelligence</div>
           </div>
-          <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-1 opacity-60">Financial Intelligence</div>
+          <button 
+            className="md:hidden p-2 hover:bg-surface-container rounded-full"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
         
         <nav className="flex-1 flex flex-col px-3">
@@ -72,6 +94,7 @@ export default function DashboardLayout({
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 border-l-4",
                   active 
@@ -88,7 +111,7 @@ export default function DashboardLayout({
 
         <div className="mt-auto px-4 space-y-6">
           <button 
-            onClick={() => abrirModal('CRIAR_LANCAMENTO')}
+            onClick={() => { abrirModal('CRIAR_LANCAMENTO'); setIsMobileMenuOpen(false); }}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-container text-on-primary rounded-md hover:opacity-90 transition-all font-bold text-sm shadow-sm"
           >
             <Plus className="w-4 h-4" />
@@ -130,8 +153,15 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col md:ml-64 h-screen overflow-hidden">
         {/* TopAppBar - Responsive Style */}
         <header className="bg-surface-container-lowest/90 backdrop-blur-md flex justify-between items-center h-16 px-4 md:px-8 w-full sticky top-0 z-40 border-b border-outline-variant">
-          {/* Logo on Mobile / Search on Desktop */}
+          {/* Menu & Logo on Mobile / Search on Desktop */}
           <div className="flex items-center gap-4 flex-1">
+            <button 
+              className="md:hidden p-2 text-on-surface-variant hover:bg-surface-container rounded-md"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
             <div className="text-xl font-black text-primary tracking-tighter flex md:hidden items-center gap-1">
               <span>Abacate</span>
               <span className="text-lg">🥑</span>
