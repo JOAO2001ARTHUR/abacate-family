@@ -138,10 +138,10 @@ export default function DashboardLayout({
             </div>
 
             <div className="hidden md:flex items-center bg-surface-container-low rounded-md px-4 py-2 w-full max-w-md group focus-within:ring-1 focus-within:ring-primary transition-all border border-transparent focus-within:border-primary">
-              <Search className="w-4 h-4 text-outline mr-3" />
+              <Search className="w-4 h-4 text-outline mr-3 shrink-0" />
               <input 
                 type="text" 
-                placeholder="Search transactions, contacts..." 
+                placeholder="Search transactions..." 
                 className="bg-transparent border-none focus:ring-0 text-sm font-medium text-on-surface w-full p-0 placeholder:text-outline"
               />
             </div>
@@ -176,8 +176,8 @@ export default function DashboardLayout({
         </header>
 
         {/* Main Scrollable Canvas */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-12 bg-background pb-24 md:pb-12">
-          <div className="max-w-[1920px] mx-auto">
+        <main className="flex-1 overflow-y-auto p-4 md:p-12 bg-background pb-32 md:pb-12">
+          <div className="max-w-[1920px] mx-auto w-full">
             {children}
           </div>
         </main>
