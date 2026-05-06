@@ -21,7 +21,8 @@ import {
   RotateCcw,
   Loader2,
   Copy,
-  Trash2
+  Trash2,
+  AlertCircle
 } from "lucide-react";
 import { useUIStore } from "@/stores/useUIStore";
 import { cn } from "@/lib/utils";
@@ -677,22 +678,35 @@ export default function LancamentosPage() {
                     </td>
                     <td className="px-4 py-5 text-center">
                       <div className="flex justify-center">
-                        <button
-                          onClick={() => abrirModal(calcularStatusReal(oc) === 'BAIXADA' ? 'DESBAIXAR' : 'BAIXAR', oc.id)}
-                          className={cn(
-                            "p-2 rounded-full transition-all hover:scale-110",
-                            calcularStatusReal(oc) === 'BAIXADA' 
-                              ? "text-primary-container bg-primary-container/10 hover:bg-primary-container/20" 
-                              : "text-outline hover:text-primary-container hover:bg-primary-container/10"
-                          )}
-                          title={calcularStatusReal(oc) === 'BAIXADA' ? "Reverter Baixa" : "Baixar Transação"}
-                        >
-                          {calcularStatusReal(oc) === 'BAIXADA' ? (
-                            <CheckCircle2 className="w-5 h-5" />
-                          ) : (
-                            <Clock className="w-5 h-5" />
-                          )}
-                        </button>
+                        {(() => {
+                          const statusReal = calcularStatusReal(oc);
+                          const isBaixada = statusReal === 'BAIXADA';
+                          const hoje = new Date().toISOString().split('T')[0];
+                          const isVencido = !isBaixada && hoje > oc.data_vencimento;
+                          
+                          return (
+                            <button
+                              onClick={() => abrirModal(isBaixada ? 'DESBAIXAR' : 'BAIXAR', oc.id)}
+                              className={cn(
+                                "p-2 rounded-full transition-all hover:scale-110",
+                                isBaixada 
+                                  ? "text-primary-container bg-primary-container/10 hover:bg-primary-container/20" 
+                                  : isVencido
+                                    ? "text-error bg-error/10 hover:bg-error/20"
+                                    : "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20"
+                              )}
+                              title={isBaixada ? "Reverter Baixa" : isVencido ? "Atrasado - Baixar Transação" : "Pendente - Baixar Transação"}
+                            >
+                              {isBaixada ? (
+                                <CheckCircle2 className="w-5 h-5" />
+                              ) : isVencido ? (
+                                <AlertCircle className="w-5 h-5" />
+                              ) : (
+                                <Clock className="w-5 h-5" />
+                              )}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="px-4 py-5 text-right">
