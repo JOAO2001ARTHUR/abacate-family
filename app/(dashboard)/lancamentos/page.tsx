@@ -101,9 +101,18 @@ export default function LancamentosPage() {
     natureza: "",
     recorrencia: "",
     valor: "",
+    status: "",
   });
 
   const [resumoAtivo, setResumoAtivo] = useState<string | null>(null);
+
+  const getStatusVisual = (oc: any) => {
+    const statusReal = calcularStatusReal(oc);
+    if (statusReal === 'BAIXADA') return 'BAIXADA';
+    const hoje = new Date().toISOString().split('T')[0];
+    if (hoje > oc.data_vencimento) return 'ATRASADO';
+    return 'PENDENTE';
+  };
 
   const filtered = (ocorrencias || []).filter(oc => {
     const matchesBuscaGlobal = 
@@ -126,6 +135,7 @@ export default function LancamentosPage() {
         case 'valor': return (oc.valor_editado ?? oc.valor).toString().includes(term);
         case 'parcela': return `${oc.numero_parcela}/${oc.total_parcelas}`.includes(term);
         case 'recorrencia': return oc.tipo.toLowerCase().includes(term);
+        case 'status': return getStatusVisual(oc).toLowerCase().includes(term);
         default: return true;
       }
     });
@@ -151,6 +161,7 @@ export default function LancamentosPage() {
         case 'recorrencia': 
           key = oc.tipo === 'FIXA' ? 'Mensal' : oc.tipo === 'PARCELA' ? 'Parcelado' : 'Único'; 
           break;
+        case 'status': key = getStatusVisual(oc); break;
         default: key = 'Outros';
       }
 
@@ -213,6 +224,7 @@ export default function LancamentosPage() {
       case 'valor': valA = a.valor_editado ?? a.valor; valB = b.valor_editado ?? b.valor; break;
       case 'parcela': valA = a.numero_parcela || 0; valB = b.numero_parcela || 0; break;
       case 'recorrencia': valA = a.tipo; valB = b.tipo; break;
+      case 'status': valA = getStatusVisual(a); valB = getStatusVisual(b); break;
       default: valA = ''; valB = '';
     }
 
@@ -534,7 +546,23 @@ export default function LancamentosPage() {
                   </div>
                   <FilterInput column="valor" />
                 </th>
-                <th className="px-4 py-4 text-center">Status</th>
+                <th 
+                  className="px-4 py-4 cursor-pointer group hover:bg-surface-container transition-colors relative"
+                  onClick={() => handleSort('status')}
+                  style={getColumnStyle('status')}
+                >
+                  <ColumnResizer index={10} columnKey="status" />
+                  <div className="flex flex-col gap-1.5 w-full items-center">
+                    <div className="flex items-start">
+                      <ResumoButton column="status" />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 w-full overflow-hidden">
+                      <span className="truncate">Status</span>
+                      <SortIcon column="status" />
+                    </div>
+                  </div>
+                  <FilterInput column="status" />
+                </th>
                 <th className="px-4 py-4 text-right">Ações</th>
               </tr>
             </thead>
@@ -679,10 +707,9 @@ export default function LancamentosPage() {
                     <td className="px-4 py-5 text-center">
                       <div className="flex justify-center">
                         {(() => {
-                          const statusReal = calcularStatusReal(oc);
-                          const isBaixada = statusReal === 'BAIXADA';
-                          const hoje = new Date().toISOString().split('T')[0];
-                          const isVencido = !isBaixada && hoje > oc.data_vencimento;
+                          const statusVisual = getStatusVisual(oc);
+                          const isBaixada = statusVisual === 'BAIXADA';
+                          const isVencido = statusVisual === 'ATRASADO';
                           
                           return (
                             <button
