@@ -213,9 +213,6 @@ export default function DashboardLayout({
             <div className="hidden sm:block h-6 w-px bg-outline-variant" />
             
             <div className="flex items-center gap-2 md:gap-4">
-              <button className="md:hidden text-on-surface-variant p-2">
-                <Search className="w-5 h-5" />
-              </button>
               <button className="text-on-surface-variant hover:text-on-surface transition-colors p-2">
                 <Bell className="w-5 h-5" />
               </button>
