@@ -54,6 +54,7 @@ export default function DashboardPage() {
 
   // Filtrar em atraso (Urgency Zone) - Agora pega de todos os meses
   const emAtraso = contasAtrasadas || [];
+  const totalEmAtraso = emAtraso.reduce((acc, oc) => acc + (oc.valor_editado ?? oc.valor), 0);
   
   // Próximos 7 dias (Horizon Zone)
   const hoje = new Date();
@@ -81,12 +82,18 @@ export default function DashboardPage() {
       {/* ZONA 1: Urgency Zone - Apenas se houver dados reais */}
       {emAtraso.length > 0 && (
         <section className="bg-error-container border-l-[6px] border-error rounded-md p-4 md:p-8 flex flex-col gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full bg-error pulse-ring-error"></div>
-            <h2 className="text-lg font-bold text-on-error-container flex items-center gap-2">
-              <AlertCircle className="w-5 h-5" />
-              {emAtraso.length} {emAtraso.length === 1 ? 'conta em atraso' : 'contas em atraso'}
-            </h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-error pulse-ring-error"></div>
+              <h2 className="text-lg font-bold text-on-error-container flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                {emAtraso.length} {emAtraso.length === 1 ? 'conta em atraso' : 'contas em atraso'}
+              </h2>
+            </div>
+            <div className="bg-surface-container-lowest/50 px-6 py-3 rounded-md border border-error/20 flex items-center gap-3 self-start md:self-auto">
+              <span className="text-[10px] font-black text-on-error-container uppercase tracking-widest opacity-60">Impacto Total:</span>
+              <span className="text-2xl font-black text-error tnum">{formatarMoeda(totalEmAtraso)}</span>
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 max-h-[320px] overflow-y-auto pr-2">
