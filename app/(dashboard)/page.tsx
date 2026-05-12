@@ -76,12 +76,7 @@ export default function DashboardPage() {
   const saldo = totais.entradas - totais.saidas;
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-2xl md:text-4xl font-black text-on-surface tracking-tighter">Dashboard</h1>
-        <p className="text-on-surface-variant text-[10px] md:text-sm font-medium mt-1">Visão geral financeira e ações pendentes.</p>
-      </div>
+    <div className="space-y-6 animate-in fade-in duration-700 pt-2">
 
       {/* ZONA 1: Urgency Zone - Apenas se houver dados reais */}
       {emAtraso.length > 0 && (
