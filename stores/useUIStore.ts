@@ -15,10 +15,12 @@ interface UIStore {
   filtrosAtivos: Filtros;
   modalAberto: ModalTipo | null;
   idSelecionado: string | null;
+  sidebarRecolhida: boolean;
   setMesAtivo: (mes: string) => void;
   setFiltros: (f: Partial<Filtros>) => void;
   abrirModal: (tipo: ModalTipo, id?: string | null) => void;
   fecharModal: () => void;
+  toggleSidebar: () => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -30,10 +32,12 @@ export const useUIStore = create<UIStore>((set) => ({
   },
   modalAberto: null,
   idSelecionado: null,
+  sidebarRecolhida: false,
   setMesAtivo: (mes) => set({ mesAtivo: mes }),
   setFiltros: (f) => set((state) => ({ 
     filtrosAtivos: { ...state.filtrosAtivos, ...f } 
   })),
   abrirModal: (tipo, id = null) => set({ modalAberto: tipo, idSelecionado: id }),
   fecharModal: () => set({ modalAberto: null, idSelecionado: null }),
+  toggleSidebar: () => set((state) => ({ sidebarRecolhida: !state.sidebarRecolhida })),
 }));

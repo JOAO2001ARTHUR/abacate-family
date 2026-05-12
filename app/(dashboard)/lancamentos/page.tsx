@@ -306,18 +306,7 @@ export default function LancamentosPage() {
   );
 
   return (
-    <div className="space-y-8 pb-40 animate-in fade-in duration-700">
-      {/* Page Header */}
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-4xl font-black text-on-surface tracking-tighter">Registro de Transações</h1>
-          <p className="text-on-surface-variant text-sm font-medium mt-1">Gerencie suas entradas e saídas financeiras.</p>
-        </div>
-        <button className="bg-primary-container text-on-primary px-8 py-3 rounded-md font-bold text-sm flex items-center gap-2 hover:opacity-90 transition-all shadow-sm">
-          <Download className="w-4 h-4" />
-          Exportar Relatório
-        </button>
-      </div>
+    <div className="space-y-6 pb-40 animate-in fade-in duration-700">
 
       {/* Filter Card - Official Style */}
       <section className="bg-surface-container-lowest border border-outline-variant rounded-md p-6 shadow-sm grid grid-cols-12 gap-4 items-end">
@@ -370,10 +359,14 @@ export default function LancamentosPage() {
           </select>
         </div>
 
-        <div className="col-span-12 md:col-span-2">
+        <div className="col-span-12 md:col-span-2 flex flex-col gap-2">
           <button className="w-full bg-primary-container text-on-primary px-4 py-3 rounded-md font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm">
             <Filter className="w-4 h-4" />
             Filtrar
+          </button>
+          <button className="w-full bg-surface-container-highest text-on-surface-variant px-4 py-2.5 rounded-md font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-surface-container transition-all border border-outline-variant">
+            <Download className="w-3.5 h-3.5" />
+            Exportar
           </button>
         </div>
       </section>

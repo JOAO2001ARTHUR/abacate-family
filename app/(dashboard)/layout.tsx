@@ -30,7 +30,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
-  const { abrirModal } = useUIStore();
+  const { abrirModal, sidebarRecolhida, toggleSidebar } = useUIStore();
   
   const [user, setUser] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -67,18 +67,25 @@ export default function DashboardLayout({
 
       {/* SideNavBar - Drawer on Mobile, Fixed on Desktop */}
       <aside className={cn(
-        "bg-surface-container-low border-r border-outline-variant h-screen w-64 fixed left-0 top-0 z-[80] flex flex-col py-6 transition-transform duration-300 md:translate-x-0",
+        "bg-surface-container-low border-r border-outline-variant h-screen fixed left-0 top-0 z-[80] flex flex-col py-6 transition-all duration-300 md:translate-x-0",
+        sidebarRecolhida ? "w-20" : "w-64",
         isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:flex"
       )}>
-        <div className="px-6 mb-8 flex items-center justify-between">
-          <div>
-            <div className="text-2xl font-black text-primary tracking-tighter flex items-center gap-2">
-              <span>Abacate</span>
-              <span className="text-xl">🥑</span>
-              <span>Family</span>
+        <div className={cn("px-6 mb-8 flex items-center justify-between", sidebarRecolhida && "px-4")}>
+          {!sidebarRecolhida ? (
+            <div>
+              <div className="text-2xl font-black text-primary tracking-tighter flex items-center gap-2">
+                <span>Abacate</span>
+                <span className="text-xl">🥑</span>
+                <span>Family</span>
+              </div>
+              <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-1 opacity-60">Financial Intelligence</div>
             </div>
-            <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-1 opacity-60">Financial Intelligence</div>
-          </div>
+          ) : (
+            <div className="text-2xl font-black text-primary flex items-center justify-center w-full">
+              <span>🥑</span>
+            </div>
+          )}
           <button 
             className="md:hidden p-2 hover:bg-surface-container rounded-full"
             onClick={() => setIsMobileMenuOpen(false)}
@@ -87,39 +94,45 @@ export default function DashboardLayout({
           </button>
         </div>
         
-        <nav className="flex-1 flex flex-col px-3">
+        <nav className="flex-1 flex flex-col px-3 gap-1">
           {navItems.map((item) => {
             const active = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                title={sidebarRecolhida ? item.label : ""}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 border-l-4",
+                  sidebarRecolhida ? "justify-center px-0 border-l-0" : "",
                   active 
                     ? "bg-primary-fixed/40 text-primary-container border-primary font-bold" 
                     : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface border-l-transparent"
                 )}
               >
                 {item.icon}
-                <span className="text-sm font-medium">{item.label}</span>
+                {!sidebarRecolhida && <span className="text-sm font-medium">{item.label}</span>}
               </Link>
             );
           })}
         </nav>
 
-        <div className="mt-auto px-4 space-y-6">
+        <div className="mt-auto px-4 space-y-4">
           <button 
             onClick={() => { abrirModal('CRIAR_LANCAMENTO'); setIsMobileMenuOpen(false); }}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary-container text-on-primary rounded-md hover:opacity-90 transition-all font-bold text-sm shadow-sm"
+            title={sidebarRecolhida ? "Novo Lançamento" : ""}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 bg-primary-container text-on-primary rounded-md hover:opacity-90 transition-all font-bold text-sm shadow-sm",
+              sidebarRecolhida ? "h-12 w-12 mx-auto px-0" : "px-4 py-3"
+            )}
           >
             <Plus className="w-4 h-4" />
-            New Transaction
+            {!sidebarRecolhida && "New Transaction"}
           </button>
           
-          <div className="flex items-center gap-3 px-2 border-t border-outline-variant pt-4 pb-2">
-            <div className="w-9 h-9 rounded-md bg-surface-container-highest flex items-center justify-center border border-outline-variant text-primary-container">
+          <div className={cn("flex items-center gap-3 px-2 border-t border-outline-variant pt-4 pb-2", sidebarRecolhida && "flex-col border-t-0 px-0")}>
+            <div className="w-9 h-9 rounded-md bg-surface-container-highest flex items-center justify-center border border-outline-variant text-primary-container shrink-0">
               {user?.user_metadata?.avatar_url ? (
                 <img 
                   src={user.user_metadata.avatar_url} 
@@ -130,30 +143,45 @@ export default function DashboardLayout({
                 <UserIcon className="w-5 h-5" />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-on-surface text-xs truncate">
-                {user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Financial Admin"}
-              </div>
-              <div className="text-[10px] text-on-surface-variant font-bold uppercase tracking-tighter opacity-60">
-                {user ? "Personal Plan" : "Pro Plan"}
-              </div>
-            </div>
-            <button 
-              onClick={handleLogout}
-              className="text-on-surface-variant hover:text-error transition-colors"
-              title="Sair"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            {!sidebarRecolhida ? (
+              <>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-on-surface text-xs truncate">
+                    {user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Financial Admin"}
+                  </div>
+                  <div className="text-[10px] text-on-surface-variant font-bold uppercase tracking-tighter opacity-60">
+                    {user ? "Personal Plan" : "Pro Plan"}
+                  </div>
+                </div>
+                <button 
+                  onClick={handleLogout}
+                  className="text-on-surface-variant hover:text-error transition-colors"
+                  title="Sair"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <button 
+                onClick={handleLogout}
+                className="text-on-surface-variant hover:text-error transition-colors"
+                title="Sair"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </aside>
 
       {/* Main Content Wrapper */}
-      <div className="flex-1 flex flex-col md:ml-64 h-screen overflow-hidden">
+      <div className={cn(
+        "flex-1 flex flex-col transition-all duration-300 h-screen overflow-hidden",
+        sidebarRecolhida ? "md:ml-20" : "md:ml-64"
+      )}>
         {/* TopAppBar - Responsive Style */}
         <header className="bg-surface-container-lowest/90 backdrop-blur-md flex justify-between items-center h-16 px-4 md:px-8 w-full sticky top-0 z-40 border-b border-outline-variant">
-          {/* Menu & Logo on Mobile / Search on Desktop */}
+          {/* Menu & Toggle on Desktop / Logo on Mobile */}
           <div className="flex items-center gap-4 flex-1">
             <button 
               className="md:hidden p-2 text-on-surface-variant hover:bg-surface-container rounded-md"
@@ -162,18 +190,18 @@ export default function DashboardLayout({
               <Menu className="w-6 h-6" />
             </button>
 
+            {/* Desktop Collapse Toggle */}
+            <button 
+              onClick={toggleSidebar}
+              className="hidden md:flex p-2 text-on-surface-variant hover:bg-surface-container rounded-md transition-colors"
+              title={sidebarRecolhida ? "Expandir Menu" : "Recolher Menu"}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
             <div className="text-xl font-black text-primary tracking-tighter flex md:hidden items-center gap-1">
               <span>Abacate</span>
               <span className="text-lg">🥑</span>
-            </div>
-
-            <div className="hidden md:flex items-center bg-surface-container-low rounded-md px-4 py-2 w-full max-w-md group focus-within:ring-1 focus-within:ring-primary transition-all border border-transparent focus-within:border-primary">
-              <Search className="w-4 h-4 text-outline mr-3 shrink-0" />
-              <input 
-                type="text" 
-                placeholder="Search transactions..." 
-                className="bg-transparent border-none focus:ring-0 text-sm font-medium text-on-surface w-full p-0 placeholder:text-outline"
-              />
             </div>
           </div>
 
