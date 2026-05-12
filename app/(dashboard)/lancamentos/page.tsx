@@ -235,10 +235,19 @@ export default function LancamentosPage() {
 
   const totais = filtered.reduce((acc, o) => {
     const valor = o.valor_editado ?? o.valor;
-    if (o.natureza === 'ENTRADA') acc.entradas += valor;
-    else acc.saidas += valor;
+    if (o.natureza === 'ENTRADA') {
+      acc.entradas += valor;
+    } else {
+      acc.saidas += valor;
+      const status = getStatusVisual(o);
+      if (status === 'BAIXADA') {
+        acc.baixado += valor;
+      } else {
+        acc.pendente += valor;
+      }
+    }
     return acc;
-  }, { entradas: 0, saidas: 0 });
+  }, { entradas: 0, saidas: 0, baixado: 0, pendente: 0 });
 
   const SortIcon = ({ column }: { column: string }) => {
     if (sortConfig.key !== column) return <ArrowUpDown className="w-3 h-3 opacity-20 group-hover:opacity-50" />;
@@ -841,26 +850,45 @@ export default function LancamentosPage() {
       )}
 
       {/* Official Sticky Footer */}
-      <footer className="fixed bottom-0 right-0 left-64 bg-surface-container-low/90 backdrop-blur-xl border-t border-outline-variant p-10 z-30 shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.03)]">
-        <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
-          <div className="flex items-center gap-16">
+      <footer className="fixed bottom-20 md:bottom-0 right-0 left-0 md:left-64 bg-surface-container-low/90 backdrop-blur-xl border-t border-outline-variant p-6 md:p-8 z-30 shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.03)]">
+        <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+          <div className="flex items-center gap-12">
             <div className="text-center">
-              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2">Total Entradas (Período)</p>
-              <p className="font-black text-xl text-primary-container tnum">+{formatarMoeda(totais.entradas)}</p>
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5">Total Entradas (Período)</p>
+              <p className="font-black text-lg text-primary-container tnum">+{formatarMoeda(totais.entradas)}</p>
             </div>
-            <div className="w-px h-12 bg-outline-variant" />
+            <div className="w-px h-10 bg-outline-variant" />
             <div className="text-center">
-              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2">Total Saídas (Período)</p>
-              <p className="font-black text-xl text-error tnum">-{formatarMoeda(totais.saidas)}</p>
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5">Total Saídas (Período)</p>
+              <p className="font-black text-lg text-error tnum">-{formatarMoeda(totais.saidas)}</p>
             </div>
           </div>
-          <div className="text-right border-l border-outline-variant pl-16">
-            <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-2">SALDO DO PERÍODO</p>
-            <div className="flex items-center gap-5">
-              <span className="text-4xl font-black text-primary-container tracking-tighter tnum">
+
+          {/* New Section: Gestão de Baixas */}
+          <div className="flex items-center gap-8 px-12 border-x border-outline-variant">
+            <div className="text-center">
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-primary" />
+                Valor Já Pago
+              </p>
+              <p className="font-black text-xl text-on-surface tnum">{formatarMoeda(totais.baixado)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-error animate-pulse" />
+                Falta Pagar
+              </p>
+              <p className="font-black text-xl text-error tnum">{formatarMoeda(totais.pendente)}</p>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5">SALDO DO PERÍODO</p>
+            <div className="flex items-center gap-4">
+              <span className={cn("text-3xl font-black tracking-tighter tnum", (totais.entradas - totais.saidas) >= 0 ? "text-primary-container" : "text-error")}>
                 {formatarMoeda(totais.entradas - totais.saidas)}
               </span>
-              <TrendingUp className={cn("w-8 h-8", (totais.entradas - totais.saidas) >= 0 ? "text-primary-container" : "text-error rotate-180")} />
+              <TrendingUp className={cn("w-6 h-6", (totais.entradas - totais.saidas) >= 0 ? "text-primary-container" : "text-error rotate-180")} />
             </div>
           </div>
         </div>
