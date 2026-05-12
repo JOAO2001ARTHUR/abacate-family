@@ -860,17 +860,17 @@ export default function LancamentosPage() {
           {/* New Section: Gestão de Baixas */}
           <div className="flex items-center gap-8 px-12 border-x border-outline-variant">
             <div className="text-center">
-              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+              <div className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-primary" />
                 Valor Já Pago
-              </p>
+              </div>
               <p className="font-black text-xl text-on-surface tnum">{formatarMoeda(totais.baixado)}</p>
             </div>
             <div className="text-center">
-              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
+              <div className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-error animate-pulse" />
                 Falta Pagar
-              </p>
+              </div>
               <p className="font-black text-xl text-error tnum">{formatarMoeda(totais.pendente)}</p>
             </div>
           </div>
