@@ -9,7 +9,6 @@ import { Modals } from "@/components/shared/Modals";
 import { createClient } from "@/utils/supabase/client";
 import { 
   Plus, 
-  Search, 
   Bell, 
   Settings, 
   Calendar,
