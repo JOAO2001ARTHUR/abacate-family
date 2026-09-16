@@ -38,7 +38,6 @@ export async function GET(request: Request) {
       )
     `)
     .eq("lancamento.user_id", user.id)
-    .eq("lancamento.ativo", true)
     .is("cancelada", false);
 
   if (atrasadas === "true") {
