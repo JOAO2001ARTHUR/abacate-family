@@ -32,7 +32,7 @@ export const useUIStore = create<UIStore>((set) => ({
   },
   modalAberto: null,
   idSelecionado: null,
-  sidebarRecolhida: false,
+  sidebarRecolhida: true,
   setMesAtivo: (mes) => set({ mesAtivo: mes }),
   setFiltros: (f) => set((state) => ({ 
     filtrosAtivos: { ...state.filtrosAtivos, ...f } 

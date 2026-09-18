@@ -33,6 +33,9 @@ export default function DashboardLayout({
   
   const [user, setUser] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const isSidebarExpanded = !sidebarRecolhida || isHovered || isMobileMenuOpen;
 
   useEffect(() => {
     const getUser = async () => {
@@ -65,13 +68,16 @@ export default function DashboardLayout({
       )}
 
       {/* SideNavBar - Drawer on Mobile, Fixed on Desktop */}
-      <aside className={cn(
+      <aside 
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={cn(
         "bg-surface-container-low border-r border-outline-variant h-screen fixed left-0 top-0 z-[80] flex flex-col py-6 transition-all duration-300 md:translate-x-0",
-        sidebarRecolhida ? "w-20" : "w-64",
-        isMobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:flex"
+        isSidebarExpanded ? "w-64 shadow-2xl" : "w-20",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full md:flex"
       )}>
-        <div className={cn("px-6 mb-8 flex items-center justify-between", sidebarRecolhida && "px-4")}>
-          {!sidebarRecolhida ? (
+        <div className={cn("px-6 mb-8 flex items-center justify-between", !isSidebarExpanded && "px-4")}>
+          {isSidebarExpanded ? (
             <div>
               <div className="text-2xl font-black text-primary tracking-tighter flex items-center gap-2">
                 <span>Abacate</span>
@@ -100,18 +106,18 @@ export default function DashboardLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                title={sidebarRecolhida ? item.label : ""}
+                title={!isSidebarExpanded ? item.label : ""}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 border-l-4",
-                  sidebarRecolhida ? "justify-center px-0 border-l-0" : "",
+                  !isSidebarExpanded ? "justify-center px-0 border-l-0" : "",
                   active 
                     ? "bg-primary-fixed/40 text-primary-container border-primary font-bold" 
                     : "text-on-surface-variant hover:bg-surface-container hover:text-on-surface border-l-transparent"
                 )}
               >
                 {item.icon}
-                {!sidebarRecolhida && <span className="text-sm font-medium">{item.label}</span>}
+                {isSidebarExpanded && <span className="text-sm font-medium">{item.label}</span>}
               </Link>
             );
           })}
@@ -120,17 +126,17 @@ export default function DashboardLayout({
         <div className="mt-auto px-4 space-y-4">
           <button 
             onClick={() => { abrirModal('CRIAR_LANCAMENTO'); setIsMobileMenuOpen(false); }}
-            title={sidebarRecolhida ? "Novo Lançamento" : ""}
+            title={!isSidebarExpanded ? "Novo Lançamento" : ""}
             className={cn(
               "w-full flex items-center justify-center gap-2 bg-primary-container text-on-primary rounded-md hover:opacity-90 transition-all font-bold text-sm shadow-sm",
-              sidebarRecolhida ? "h-12 w-12 mx-auto px-0" : "px-4 py-3"
+              !isSidebarExpanded ? "h-12 w-12 mx-auto px-0" : "px-4 py-3"
             )}
           >
             <Plus className="w-4 h-4" />
-            {!sidebarRecolhida && "New Transaction"}
+            {isSidebarExpanded && "New Transaction"}
           </button>
           
-          <div className={cn("flex items-center gap-3 px-2 border-t border-outline-variant pt-4 pb-2", sidebarRecolhida && "flex-col border-t-0 px-0")}>
+          <div className={cn("flex items-center gap-3 px-2 border-t border-outline-variant pt-4 pb-2", !isSidebarExpanded && "flex-col border-t-0 px-0")}>
             <div className="w-9 h-9 rounded-md bg-surface-container-highest flex items-center justify-center border border-outline-variant text-primary-container shrink-0">
               {user?.user_metadata?.avatar_url ? (
                 <img 
@@ -142,7 +148,7 @@ export default function DashboardLayout({
                 <UserIcon className="w-5 h-5" />
               )}
             </div>
-            {!sidebarRecolhida ? (
+            {isSidebarExpanded ? (
               <>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-on-surface text-xs truncate">
