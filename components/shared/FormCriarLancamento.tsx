@@ -104,14 +104,20 @@ export function FormCriarLancamento() {
       const ocorrenciasData = [];
 
       for (let i = 0; i < numOcorrencias; i++) {
-        const dataVenc = new Date(dataInicio);
+        const dataVenc = new Date(dataInicio + "T12:00:00");
         dataVenc.setMonth(dataVenc.getMonth() + i);
         
+        const ano = dataVenc.getFullYear();
+        const mesStr = String(dataVenc.getMonth() + 1).padStart(2, '0');
+        const diaStr = String(dataVenc.getDate()).padStart(2, '0');
+        const vencStr = `${ano}-${mesStr}-${diaStr}`;
+        const compStr = `${ano}-${mesStr}-01`;
+
         ocorrenciasData.push({
           lancamento_id: lancamento.id,
           numero_parcela: tipo === "PARCELA" ? i + 1 : null,
-          data_vencimento: dataVenc.toISOString().split('T')[0],
-          data_competencia: dataVenc.toISOString().split('T')[0],
+          data_vencimento: vencStr,
+          data_competencia: compStr,
           valor: parseFloat(valorBase),
           status: "PENDENTE",
         });

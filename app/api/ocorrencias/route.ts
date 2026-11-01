@@ -107,7 +107,7 @@ export async function GET(request: Request) {
   }
 
   // --- Auto-Sync Logic (FIXA e PARCELA) ---
-  if (mes && data.length > 0) {
+  if (mes) {
     const date = parseISO(`${mes}-01`);
     const endOfMonthStr = format(endOfMonth(date), "yyyy-MM-dd");
     
@@ -154,12 +154,13 @@ export async function GET(request: Request) {
           if (numeroParcela > 0 && numeroParcela <= (regra.total_parcelas || 0)) {
             const dataVenc = addMonths(dataInicio, diffMeses);
             const dataStr = format(dataVenc, "yyyy-MM-dd");
+            const compStr = format(startOfMonth(dataVenc), "yyyy-MM-dd");
             
             novasOcorrencias.push({
               lancamento_id: regra.id,
               numero_parcela: numeroParcela,
               data_vencimento: dataStr,
-              data_competencia: dataStr,
+              data_competencia: compStr,
               valor: regra.valor_base,
               status: "PENDENTE",
             });

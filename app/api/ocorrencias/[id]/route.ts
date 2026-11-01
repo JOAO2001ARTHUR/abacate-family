@@ -23,8 +23,7 @@ export async function PUT(
       status: body.status,
       cancelada: body.cancelada,
     })
-    .eq("id", id)
-    .eq("user_id", user.id); // Embora user_id não esteja diretamente em ocorrencias, RLS deve cuidar disso ou podemos dar join
+    .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
