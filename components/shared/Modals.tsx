@@ -20,6 +20,20 @@ export function Modals() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Localizar ocorrência no cache do React Query para contextualizar textos
+  const allOcorrencias = queryClient.getQueriesData<any[]>({ queryKey: ["ocorrencias"] });
+  let itemSelecionado: any = null;
+  for (const [, list] of allOcorrencias) {
+    if (Array.isArray(list)) {
+      const found = list.find((item: any) => item.id === idSelecionado);
+      if (found) {
+        itemSelecionado = found;
+        break;
+      }
+    }
+  }
+  const isEntrada = itemSelecionado?.natureza === "ENTRADA";
+
   if (!modalAberto || ['DETALHES_MES_CONTATO', 'DETALHES_PAGOS_CONTATO', 'DETALHES_PENDENTES_CONTATO'].includes(modalAberto)) return null;
 
   const handleConfirmarBaixa = async () => {
@@ -117,8 +131,14 @@ export function Modals() {
                 <CheckCircle2 className="w-10 h-10" />
               </div>
               <div className="space-y-2">
-                <h4 className="text-2xl font-black text-on-surface tracking-tighter">Confirmar Baixa?</h4>
-                <p className="text-on-surface-variant font-medium">Você está confirmando o pagamento desta conta. Esta ação registrará a data e hora atual.</p>
+                <h4 className="text-2xl font-black text-on-surface tracking-tighter">
+                  {isEntrada ? "Confirmar Recebimento?" : "Confirmar Pagamento?"}
+                </h4>
+                <p className="text-on-surface-variant font-medium">
+                  {isEntrada 
+                    ? "Você está confirmando o recebimento desta receita. Esta ação registrará a entrada no seu caixa."
+                    : "Você está confirmando o pagamento desta conta. Esta ação registrará a liquidação da despesa."}
+                </p>
               </div>
               <div className="flex gap-4 pt-4">
                 <button 
@@ -133,7 +153,7 @@ export function Modals() {
                   disabled={loading}
                   className="flex-1 px-6 py-3 bg-primary text-on-primary rounded-md font-bold hover:opacity-90 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Confirmar Pagamento"}
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : isEntrada ? "Confirmar Recebimento" : "Confirmar Pagamento"}
                 </button>
               </div>
             </div>
@@ -145,8 +165,14 @@ export function Modals() {
                 <RotateCcw className="w-10 h-10" />
               </div>
               <div className="space-y-2">
-                <h4 className="text-2xl font-black text-on-surface tracking-tighter">Reverter Baixa?</h4>
-                <p className="text-on-surface-variant font-medium">Você está desmarcando o pagamento desta conta. O status voltará para "Pendente".</p>
+                <h4 className="text-2xl font-black text-on-surface tracking-tighter">
+                  {isEntrada ? "Reverter Recebimento?" : "Reverter Pagamento?"}
+                </h4>
+                <p className="text-on-surface-variant font-medium">
+                  {isEntrada
+                    ? "Você está desmarcando o recebimento desta receita. O status voltará para 'Pendente'."
+                    : "Você está desmarcando o pagamento desta conta. O status voltará para 'Pendente'."}
+                </p>
               </div>
               <div className="flex gap-4 pt-4">
                 <button 

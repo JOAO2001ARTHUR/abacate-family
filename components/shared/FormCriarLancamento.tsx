@@ -51,6 +51,7 @@ export function FormCriarLancamento() {
   const [totalParcelas, setTotalParcelas] = useState("1");
 
   const [localPagamentoId, setLocalPagamentoId] = useState("");
+  const [espelharProlabore, setEspelharProlabore] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,6 +126,49 @@ export function FormCriarLancamento() {
 
       const { error: oError } = await supabase.from("ocorrencias").insert(ocorrenciasData);
       if (oError) throw oError;
+
+      // Se for Pró-labore espelhado, cria automaticamente a entrada no Pessoal (PF)
+      if (espelharProlabore && contexto === "EMPRESA" && natureza === "SAIDA") {
+        const insertPessoalPayload: any = {
+          user_id: user.id,
+          nome: `Pró-labore (${nome || 'Empresa'})`,
+          natureza: "ENTRADA",
+          tipo,
+          categoria_id: categoriaId,
+          contato_id: contatoId || null,
+          local_pagamento_id: localPagamentoId || null,
+          valor_base: parseFloat(valorBase),
+          data_inicio: dataInicio,
+          total_parcelas: tipo === "PARCELA" ? parseInt(totalParcelas) : null,
+          contexto: "PESSOAL",
+          descricao: `PROLABORE_LINK:${lancamento.id}`,
+        };
+
+        let { data: lancPessoal, error: lpError } = await supabase
+          .from("lancamentos")
+          .insert(insertPessoalPayload)
+          .select()
+          .single();
+
+        if (lpError && (lpError.code === "42703" || lpError.message?.includes("contexto"))) {
+          delete insertPessoalPayload.contexto;
+          const fallbackRes = await supabase
+            .from("lancamentos")
+            .insert(insertPessoalPayload)
+            .select()
+            .single();
+          lancPessoal = fallbackRes.data;
+          lpError = fallbackRes.error;
+        }
+
+        if (!lpError && lancPessoal) {
+          const ocorrenciasPessoal = ocorrenciasData.map(oc => ({
+            ...oc,
+            lancamento_id: lancPessoal.id,
+          }));
+          await supabase.from("ocorrencias").insert(ocorrenciasPessoal);
+        }
+      }
 
       queryClient.invalidateQueries({ queryKey: ["ocorrencias"] });
       fecharModal();
@@ -233,13 +277,45 @@ export function FormCriarLancamento() {
               <input 
                 type="text" 
                 required
-                placeholder="Ex: Aluguel, Salário..."
+                placeholder="Ex: Faturamento, Pró-labore, Aluguel..."
                 value={nome}
-                onChange={(e) => setNome(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setNome(val);
+                  if (contexto === "EMPRESA" && natureza === "SAIDA") {
+                    const lower = val.toLowerCase();
+                    if (lower.includes("pró-labore") || lower.includes("pro-labore") || lower.includes("prolabore")) {
+                      setEspelharProlabore(true);
+                    }
+                  }
+                }}
                 className="w-full px-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-md focus:border-primary-container outline-none transition-all text-sm font-bold"
               />
             </div>
           </div>
+
+          {/* Opção Inteligente de Pró-labore / Retirada */}
+          {contexto === "EMPRESA" && natureza === "SAIDA" && (
+            <div className="p-3.5 bg-primary-fixed/20 border border-primary/30 rounded-md transition-all animate-in fade-in duration-300">
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <input 
+                  type="checkbox"
+                  checked={espelharProlabore}
+                  onChange={(e) => setEspelharProlabore(e.target.checked)}
+                  className="w-4 h-4 rounded border-outline-variant text-primary-container focus:ring-primary-container cursor-pointer"
+                />
+                <div className="flex-1">
+                  <p className="text-xs font-black text-on-surface flex items-center gap-1.5">
+                    <span>🔄</span>
+                    <span>Espelhar como Entrada no meu Pessoal (PF)</span>
+                  </p>
+                  <p className="text-[10px] font-medium text-on-surface-variant opacity-80 mt-0.5">
+                    Gera automaticamente o recebimento correspondente no seu caixa Pessoal na mesma data.
+                  </p>
+                </div>
+              </label>
+            </div>
+          )}
 
           {/* Valor & Data */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

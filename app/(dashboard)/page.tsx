@@ -48,12 +48,12 @@ const renderLabelSaidas = (props: any) => {
 };
 
 export default function DashboardPage() {
-  const { contextoAtivo } = useUIStore();
+  const { contextoAtivo, abrirModal } = useUIStore();
   const { data: ocorrencias, isLoading } = useOcorrencias();
   const { data: contasAtrasadas } = useContasAtrasadas();
   const { data: fluxoData, isLoading: isLoadingFluxo } = useFluxoCaixa();
 
-  // Filtrar em atraso (Urgency Zone) - Agora pega de todos os meses
+  // Filtrar em atraso (Urgency Zone) - Apenas Saídas
   const emAtraso = contasAtrasadas || [];
   const totalEmAtraso = emAtraso.reduce((acc, oc) => acc + (oc.valor_editado ?? oc.valor), 0);
   
@@ -93,6 +93,26 @@ export default function DashboardPage() {
     pessoalEntradas: 0, pessoalSaidas: 0, empresaEntradas: 0, empresaSaidas: 0
   };
 
+  // Identificar transferências de Pró-labore para neutralizar dupla contagem
+  const isProlabore = (o: any) => {
+    const nomeLower = (o.nome || '').toLowerCase();
+    const catLower = (o.categoria?.nome || '').toLowerCase();
+    const descLower = (o.descricao || '').toLowerCase();
+    return nomeLower.includes('pró-labore') || nomeLower.includes('pro-labore') || nomeLower.includes('prolabore') ||
+           catLower.includes('pró-labore') || catLower.includes('pro-labore') || catLower.includes('prolabore') ||
+           descLower.includes('prolabore_link');
+  };
+
+  let prolaboreTransferido = 0;
+  ocorrencias?.forEach(o => {
+    if (isProlabore(o) && o.contexto === 'PESSOAL' && o.natureza === 'ENTRADA') {
+      prolaboreTransferido += (o.valor_editado ?? o.valor);
+    }
+  });
+
+  const entradasExibidas = contextoAtivo === 'TODOS' ? Math.max(0, totais.entradas - prolaboreTransferido) : totais.entradas;
+  const saidasExibidas = contextoAtivo === 'TODOS' ? Math.max(0, totais.saidas - prolaboreTransferido) : totais.saidas;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-700 pt-2">
 
@@ -127,7 +147,10 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center justify-between sm:justify-end gap-4 md:gap-8 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-error/5">
                   <span className="font-black text-on-surface tnum text-base md:text-lg">{formatarMoeda(oc.valor_editado ?? oc.valor)}</span>
-                  <button className="bg-error text-on-error px-4 md:px-6 py-2 rounded-md font-bold text-xs md:text-sm hover:opacity-90 transition-opacity shrink-0">
+                  <button 
+                    onClick={() => abrirModal('BAIXAR', oc.id)}
+                    className="bg-error text-on-error px-4 md:px-6 py-2 rounded-md font-bold text-xs md:text-sm hover:opacity-90 transition-opacity shrink-0 cursor-pointer"
+                  >
                     Baixar
                   </button>
                 </div>
@@ -164,11 +187,26 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Banner de Pró-labore Neutralizado no Consolidado */}
+        {prolaboreTransferido > 0 && contextoAtivo === 'TODOS' && (
+          <div className="bg-primary-fixed/20 border border-primary/20 rounded-md px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-bold text-on-surface animate-in fade-in duration-300">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🔄</span>
+              <span>Pró-labore / Retirada detectada: <strong className="text-primary-container tnum">{formatarMoeda(prolaboreTransferido)}</strong></span>
+            </div>
+            <span className="text-[10px] uppercase font-black tracking-widest text-primary-container opacity-90 bg-surface-container-lowest px-2 py-1 rounded border border-primary/20">
+              Neutralizado no Consolidado (Sem Contagem Dupla)
+            </span>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-stack-lg">
           {/* Card Saldo */}
           <div className="bg-surface-container-lowest border border-outline-variant p-6 rounded-md shadow-sm hover:border-primary transition-all relative overflow-hidden group">
             <div className="flex items-center justify-between mb-6">
-              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Saldo do Mês</span>
+              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">
+                {contextoAtivo === 'EMPRESA' ? 'Caixa da Empresa (PJ)' : contextoAtivo === 'PESSOAL' ? 'Sobra Pessoal (PF)' : 'Saldo Consolidado'}
+              </span>
               <span className="material-symbols-outlined text-primary-container text-2xl group-hover:scale-110 transition-transform">account_balance_wallet</span>
             </div>
             <div className="text-2xl md:text-4xl font-black text-on-surface mb-3 tracking-tighter tnum">
@@ -182,7 +220,7 @@ export default function DashboardPage() {
             ) : (
               <div className="flex items-center gap-1 text-[11px] font-bold text-primary-container">
                 <TrendingUp className="w-4 h-4" />
-                <span>{contextoAtivo === 'PESSOAL' ? 'Finanças Pessoais' : 'Finanças da Empresa'}</span>
+                <span>{contextoAtivo === 'PESSOAL' ? 'Disponibilidade Familiar' : 'Lucro Retido na Operação'}</span>
               </div>
             )}
           </div>
@@ -190,11 +228,13 @@ export default function DashboardPage() {
           {/* Card Entradas */}
           <div className="bg-surface-container-lowest border border-outline-variant p-6 rounded-md shadow-sm hover:border-primary transition-all relative overflow-hidden group">
             <div className="flex items-center justify-between mb-6">
-              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Entradas</span>
+              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">
+                {contextoAtivo === 'EMPRESA' ? 'Faturamento da Empresa' : contextoAtivo === 'PESSOAL' ? 'Entradas Pessoais' : 'Faturamento Real do Grupo'}
+              </span>
               <span className="material-symbols-outlined text-primary-container text-2xl group-hover:scale-110 transition-transform">arrow_downward</span>
             </div>
             <div className="text-2xl md:text-4xl font-black text-on-surface mb-3 tracking-tighter tnum">
-              {formatarMoeda(totais.entradas)}
+              {formatarMoeda(entradasExibidas)}
             </div>
             {contextoAtivo === 'TODOS' ? (
               <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant pt-1 border-t border-outline-variant/40">
@@ -203,7 +243,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="text-xs font-bold text-on-surface-variant">
-                Total recebido ({contextoAtivo === 'PESSOAL' ? 'PF' : 'PJ'})
+                {contextoAtivo === 'PESSOAL' ? 'Renda & Pró-labore recebido' : 'Receita bruta de vendas e clientes'}
               </div>
             )}
           </div>
@@ -211,11 +251,13 @@ export default function DashboardPage() {
           {/* Card Saídas */}
           <div className="bg-surface-container-lowest border border-outline-variant p-6 rounded-md shadow-sm hover:border-error transition-all relative overflow-hidden group">
             <div className="flex items-center justify-between mb-6">
-              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Saídas</span>
+              <span className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest">
+                {contextoAtivo === 'EMPRESA' ? 'Custos & Pró-labore PJ' : contextoAtivo === 'PESSOAL' ? 'Gastos Pessoais & Casa' : 'Despesas Globais'}
+              </span>
               <span className="material-symbols-outlined text-error text-2xl group-hover:scale-110 transition-transform">arrow_upward</span>
             </div>
             <div className="text-2xl md:text-4xl font-black text-on-surface mb-3 tracking-tighter tnum">
-              {formatarMoeda(totais.saidas)}
+              {formatarMoeda(saidasExibidas)}
             </div>
             {contextoAtivo === 'TODOS' ? (
               <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant pt-1 border-t border-outline-variant/40">
@@ -224,7 +266,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="text-xs font-bold text-on-surface-variant">
-                Comprometimento ({contextoAtivo === 'PESSOAL' ? 'PF' : 'PJ'})
+                {contextoAtivo === 'PESSOAL' ? 'Comprometimento familiar' : 'Despesas operacionais e retiradas'}
               </div>
             )}
           </div>

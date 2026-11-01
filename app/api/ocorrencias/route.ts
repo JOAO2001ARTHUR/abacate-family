@@ -64,7 +64,7 @@ export async function GET(request: Request) {
 
     if (atrasadas === "true") {
       const hoje = format(new Date(), "yyyy-MM-dd");
-      q = q.lt("data_vencimento", hoje).eq("status", "PENDENTE");
+      q = q.lt("data_vencimento", hoje).eq("status", "PENDENTE").eq("lancamento.natureza", "SAIDA");
     } else if (mes) {
       const date = parseISO(`${mes}-01`);
       const start = format(startOfMonth(date), "yyyy-MM-dd");
