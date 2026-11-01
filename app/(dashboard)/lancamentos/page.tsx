@@ -8,7 +8,6 @@ import {
   Search,
   Filter,
   Calendar,
-  MoreVertical,
   CheckCircle2,
   Clock,
   TrendingUp,
@@ -22,19 +21,26 @@ import {
   Loader2,
   Copy,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  SlidersHorizontal,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Tag
 } from "lucide-react";
 import { useUIStore } from "@/stores/useUIStore";
 import { cn } from "@/lib/utils";
 import { useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
 
 export default function LancamentosPage() {
   const queryClient = useQueryClient();
   const { data: ocorrencias, isLoading } = useOcorrencias();
-  const { abrirModal, mesAtivo, setMesAtivo, filtrosAtivos, setFiltros } = useUIStore();
+  const { abrirModal, mesAtivo, setMesAtivo, filtrosAtivos, setFiltros, contextoAtivo } = useUIStore();
+  
   const [busca, setBusca] = useState("");
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [mostrarFiltrosColunas, setMostrarFiltrosColunas] = useState(false);
+  const [filtroStatusRapido, setFiltroStatusRapido] = useState<'TODOS' | 'ATRASADO' | 'PENDENTE' | 'BAIXADA'>('TODOS');
 
   const [colWidths, setColWidths] = useState<Record<string, number>>({});
   const tableRef = useRef<HTMLTableElement>(null);
@@ -47,7 +53,6 @@ export default function LancamentosPage() {
     
     rows.forEach(row => {
       const td = row.children[index] as HTMLElement;
-      // Ignorar linhas de resumo que usam colSpan
       if (!td || (td as HTMLTableCellElement).colSpan > 1) return;
       
       const clone = td.cloneNode(true) as HTMLElement;
@@ -56,7 +61,6 @@ export default function LancamentosPage() {
       clone.style.position = 'absolute';
       clone.style.visibility = 'hidden';
       clone.style.whiteSpace = 'nowrap';
-      // Remover padding no clone para medirmos só o conteúdo, ou manter para medir o total
       document.body.appendChild(clone);
       
       const width = clone.getBoundingClientRect().width;
@@ -115,10 +119,18 @@ export default function LancamentosPage() {
   };
 
   const filtered = (ocorrencias || []).filter(oc => {
+    const statusVisual = getStatusVisual(oc);
+
+    // Filtro rápido de status
+    if (filtroStatusRapido !== 'TODOS' && statusVisual !== filtroStatusRapido) {
+      return false;
+    }
+
     const matchesBuscaGlobal = 
       oc.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      oc.categoria?.nome.toLowerCase().includes(busca.toLowerCase()) ||
-      oc.contato?.nome?.toLowerCase().includes(busca.toLowerCase());
+      (oc.categoria?.nome || '').toLowerCase().includes(busca.toLowerCase()) ||
+      (oc.contato?.nome || '').toLowerCase().includes(busca.toLowerCase()) ||
+      (oc.onde_pagar || '').toLowerCase().includes(busca.toLowerCase());
 
     const matchesColunas = Object.entries(filtrosColunas).every(([key, value]) => {
       if (!value) return true;
@@ -128,14 +140,14 @@ export default function LancamentosPage() {
         case 'vencimento': return oc.data_vencimento.includes(term);
         case 'competencia': return oc.data_competencia.includes(term);
         case 'nome': return oc.nome.toLowerCase().includes(term);
-        case 'categoria': return oc.categoria?.nome.toLowerCase().includes(term);
+        case 'categoria': return (oc.categoria?.nome || '').toLowerCase().includes(term);
         case 'contato': return (oc.contato?.nome || 'Particular').toLowerCase().includes(term);
         case 'onde_pagar': return (oc.onde_pagar || '').toLowerCase().includes(term);
         case 'natureza': return oc.natureza.toLowerCase().includes(term);
         case 'valor': return (oc.valor_editado ?? oc.valor).toString().includes(term);
         case 'parcela': return `${oc.numero_parcela}/${oc.total_parcelas}`.includes(term);
         case 'recorrencia': return oc.tipo.toLowerCase().includes(term);
-        case 'status': return getStatusVisual(oc).toLowerCase().includes(term);
+        case 'status': return statusVisual.toLowerCase().includes(term);
         default: return true;
       }
     });
@@ -209,7 +221,6 @@ export default function LancamentosPage() {
     });
   };
 
-
   const sortedData = [...filtered].sort((a, b) => {
     if (!sortConfig.key || !sortConfig.direction) return 0;
     
@@ -236,21 +247,28 @@ export default function LancamentosPage() {
     return 0;
   });
 
-  const totais = filtered.reduce((acc, o) => {
+  // Métricas do Mês (Previsibilidade de Caixa)
+  const totais = (ocorrencias || []).reduce((acc, o) => {
     const valor = o.valor_editado ?? o.valor;
+    const status = getStatusVisual(o);
+
     if (o.natureza === 'ENTRADA') {
-      acc.entradas += valor;
+      acc.entradasTotal += valor;
+      if (status === 'BAIXADA') acc.entradasRecebidas += valor;
+      else acc.entradasPendentes += valor;
     } else {
-      acc.saidas += valor;
-      const status = getStatusVisual(o);
-      if (status === 'BAIXADA') {
-        acc.baixado += valor;
-      } else {
-        acc.pendente += valor;
-      }
+      acc.saidasTotal += valor;
+      if (status === 'BAIXADA') acc.saidasPagas += valor;
+      else acc.saidasPendentes += valor;
     }
     return acc;
-  }, { entradas: 0, saidas: 0, baixado: 0, pendente: 0 });
+  }, { 
+    entradasTotal: 0, entradasRecebidas: 0, entradasPendentes: 0,
+    saidasTotal: 0, saidasPagas: 0, saidasPendentes: 0 
+  });
+
+  const saldoProjetado = totais.entradasTotal - totais.saidasTotal;
+  const saldoRealizado = totais.entradasRecebidas - totais.saidasPagas;
 
   const SortIcon = ({ column }: { column: string }) => {
     if (sortConfig.key !== column) return <ArrowUpDown className="w-3 h-3 opacity-20 group-hover:opacity-50" />;
@@ -259,16 +277,19 @@ export default function LancamentosPage() {
       <ArrowDown className="w-3 h-3 text-primary-container" />;
   };
 
-  const FilterInput = ({ column }: { column: string }) => (
-    <input 
-      type="text"
-      placeholder="..."
-      value={filtrosColunas[column] || ""}
-      onChange={(e) => setFiltrosColunas(prev => ({ ...prev, [column]: e.target.value }))}
-      onClick={(e) => e.stopPropagation()}
-      className="mt-2 w-full px-2 py-1 bg-surface-container-highest/50 border border-outline-variant/30 rounded text-[9px] font-medium outline-none focus:border-primary-container transition-all"
-    />
-  );
+  const FilterInput = ({ column }: { column: string }) => {
+    if (!mostrarFiltrosColunas) return null;
+    return (
+      <input 
+        type="text"
+        placeholder="..."
+        value={filtrosColunas[column] || ""}
+        onChange={(e) => setFiltrosColunas(prev => ({ ...prev, [column]: e.target.value }))}
+        onClick={(e) => e.stopPropagation()}
+        className="mt-2 w-full px-2 py-1 bg-surface-container-highest/60 border border-outline-variant/40 rounded text-[9px] font-medium outline-none focus:border-primary-container transition-all"
+      />
+    );
+  };
 
   const ResumoButton = ({ column }: { column: string }) => {
     const isAtivo = resumoAtivo === column;
@@ -282,7 +303,7 @@ export default function LancamentosPage() {
           "text-[8px] px-1.5 py-0.5 rounded uppercase font-black transition-all shrink-0",
           isAtivo 
             ? "bg-primary-container text-on-primary shadow-sm" 
-            : "bg-surface-container-highest text-on-surface-variant opacity-50 group-hover:opacity-100 hover:bg-primary-container/20 hover:text-primary-container"
+            : "bg-surface-container-highest text-on-surface-variant opacity-40 group-hover:opacity-100 hover:bg-primary-container/20 hover:text-primary-container"
         )}
         title={`Resumir por ${column}`}
       >
@@ -309,73 +330,204 @@ export default function LancamentosPage() {
   );
 
   return (
-    <div className="space-y-6 pb-40 animate-in fade-in duration-700">
+    <div className="space-y-6 pb-44 animate-in fade-in duration-500">
 
-      {/* Filter Card - Official Style */}
-      <section className="bg-surface-container-lowest border border-outline-variant rounded-md p-6 shadow-sm grid grid-cols-12 gap-4 items-end">
-        <div className="col-span-12 md:col-span-5 space-y-2">
-          <label className="block text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Buscar</label>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" />
-            <input 
-              type="text" 
-              placeholder="Descrição, categoria..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-surface-container-low border border-outline-variant rounded-md focus:border-primary-container focus:ring-0 outline-none transition-all text-sm font-medium"
-            />
+      {/* 1. Header de Previsibilidade Financeira do Mês */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card Entradas */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-md p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-primary-container" />
+              Previsão de Entradas
+            </span>
+            <span className="text-xs font-bold text-primary-container">
+              {totais.entradasRecebidas > 0 ? `${Math.round((totais.entradasRecebidas / (totais.entradasTotal || 1)) * 100)}% recebido` : '0%'}
+            </span>
+          </div>
+          <div className="text-2xl font-black text-on-surface tnum tracking-tight mb-2">
+            +{formatarMoeda(totais.entradasTotal)}
+          </div>
+          <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant pt-2 border-t border-outline-variant/30">
+            <span className="text-primary-container">Já Recebido: {formatarMoeda(totais.entradasRecebidas)}</span>
+            <span className="opacity-70">A Receber: {formatarMoeda(totais.entradasPendentes)}</span>
           </div>
         </div>
-        
-        <div className="col-span-12 md:col-span-3 space-y-2">
-          <label className="block text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Mês de Referência</label>
-          <div className="flex items-center justify-between px-2 py-1.5 bg-surface-container-low border border-outline-variant rounded-md">
+
+        {/* Card Saídas */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-md p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-error" />
+              Compromissos a Pagar
+            </span>
+            <span className="text-xs font-bold text-error">
+              {totais.saidasPagas > 0 ? `${Math.round((totais.saidasPagas / (totais.saidasTotal || 1)) * 100)}% pago` : '0%'}
+            </span>
+          </div>
+          <div className="text-2xl font-black text-on-surface tnum tracking-tight mb-2">
+            -{formatarMoeda(totais.saidasTotal)}
+          </div>
+          <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant pt-2 border-t border-outline-variant/30">
+            <span className="text-on-surface">Já Liquidado: {formatarMoeda(totais.saidasPagas)}</span>
+            <span className="text-error">Falta Pagar: {formatarMoeda(totais.saidasPendentes)}</span>
+          </div>
+        </div>
+
+        {/* Card Saldo Projetado */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-md p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
+              Saldo Projetado (Fechamento)
+            </span>
+            <TrendingUp className={cn("w-4 h-4", saldoProjetado >= 0 ? "text-primary-container" : "text-error rotate-180")} />
+          </div>
+          <div className={cn(
+            "text-2xl font-black tnum tracking-tight mb-2",
+            saldoProjetado >= 0 ? "text-primary-container" : "text-error"
+          )}>
+            {saldoProjetado >= 0 ? '+' : ''}{formatarMoeda(saldoProjetado)}
+          </div>
+          <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant pt-2 border-t border-outline-variant/30">
+            <span>Saldo Realizado Hoje:</span>
+            <strong className={cn("tnum", saldoRealizado >= 0 ? "text-primary-container" : "text-error")}>
+              {formatarMoeda(saldoRealizado)}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Barra de Controle Rápido (Abas de Natureza + Seletor de Mês + Busca Inteligente) */}
+      <section className="bg-surface-container-lowest border border-outline-variant rounded-md p-4 shadow-xs space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          
+          {/* Abas Rápidas de Natureza */}
+          <div className="flex bg-surface-container-low p-1 rounded-md border border-outline-variant/40 shrink-0">
+            <button
+              onClick={() => setFiltros({ natureza: 'TODAS' })}
+              className={cn(
+                "px-3.5 py-1.5 text-xs font-black uppercase tracking-wider rounded-sm transition-all flex items-center gap-2",
+                filtrosAtivos.natureza === 'TODAS' 
+                  ? "bg-surface-container-lowest text-on-surface shadow-xs border border-outline-variant/60" 
+                  : "text-on-surface-variant hover:text-on-surface"
+              )}
+            >
+              <span>🥑</span> Todas as Movimentações
+            </button>
+            <button
+              onClick={() => setFiltros({ natureza: 'SAIDA' })}
+              className={cn(
+                "px-3.5 py-1.5 text-xs font-black uppercase tracking-wider rounded-sm transition-all flex items-center gap-2",
+                filtrosAtivos.natureza === 'SAIDA' 
+                  ? "bg-error text-on-error shadow-xs" 
+                  : "text-on-surface-variant hover:text-on-surface"
+              )}
+            >
+              <span>📉</span> Contas a Pagar (Saídas)
+            </button>
+            <button
+              onClick={() => setFiltros({ natureza: 'ENTRADA' })}
+              className={cn(
+                "px-3.5 py-1.5 text-xs font-black uppercase tracking-wider rounded-sm transition-all flex items-center gap-2",
+                filtrosAtivos.natureza === 'ENTRADA' 
+                  ? "bg-primary-container text-on-primary shadow-xs" 
+                  : "text-on-surface-variant hover:text-on-surface"
+              )}
+            >
+              <span>📈</span> Recebimentos (Entradas)
+            </button>
+          </div>
+
+          {/* Navegador de Mês */}
+          <div className="flex items-center justify-between sm:justify-start gap-2 bg-surface-container-low px-2 py-1 rounded-md border border-outline-variant/40">
             <button 
               onClick={() => mudarMes(-1)}
-              className="p-1.5 hover:bg-surface-container-highest rounded-md transition-colors text-on-surface-variant"
+              className="p-1 hover:bg-surface-container-highest rounded text-on-surface-variant transition-colors"
+              title="Mês Anterior"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-2 px-2">
+            <div className="flex items-center gap-2 px-3">
               <Calendar className="w-4 h-4 text-primary-container" />
-              <span className="text-sm font-bold text-on-surface capitalize">{mesFormatado}</span>
+              <span className="text-xs font-black uppercase tracking-wider text-on-surface capitalize">{mesFormatado}</span>
             </div>
             <button 
               onClick={() => mudarMes(1)}
-              className="p-1.5 hover:bg-surface-container-highest rounded-md transition-colors text-on-surface-variant"
+              className="p-1 hover:bg-surface-container-highest rounded text-on-surface-variant transition-colors"
+              title="Próximo Mês"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-        </div>
 
-        <div className="col-span-12 md:col-span-2 space-y-2">
-          <label className="block text-[10px] font-black text-on-surface-variant uppercase tracking-widest">Natureza</label>
-          <select 
-            value={filtrosAtivos.natureza}
-            onChange={(e) => setFiltros({ natureza: e.target.value as any })}
-            className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant rounded-md text-sm font-medium outline-none"
+          {/* Botão Novo Lançamento */}
+          <button 
+            onClick={() => abrirModal('CRIAR_LANCAMENTO')}
+            className="bg-primary-container text-on-primary px-5 py-2.5 rounded-md font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm shrink-0 cursor-pointer"
           >
-            <option value="TODAS">Todas</option>
-            <option value="ENTRADA">Entrada</option>
-            <option value="SAIDA">Saída</option>
-          </select>
+            <Plus className="w-4 h-4" />
+            Novo Lançamento
+          </button>
         </div>
 
-        <div className="col-span-12 md:col-span-2 flex flex-col gap-2">
-          <button className="w-full bg-primary-container text-on-primary px-4 py-3 rounded-md font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-sm">
-            <Filter className="w-4 h-4" />
-            Filtrar
-          </button>
-          <button className="w-full bg-surface-container-highest text-on-surface-variant px-4 py-2.5 rounded-md font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-surface-container transition-all border border-outline-variant">
-            <Download className="w-3.5 h-3.5" />
-            Exportar
-          </button>
+        {/* Linha 2: Busca Unificada + Chips de Filtro Rápido */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2 border-t border-outline-variant/30">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-outline" />
+            <input 
+              type="text" 
+              placeholder="Buscar descrição, categoria, contato ou banco..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant/60 rounded-md focus:border-primary-container outline-none transition-all text-xs font-medium"
+            />
+          </div>
+
+          {/* Chips de Status Rápido */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+            <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant opacity-60 hidden sm:inline">Status:</span>
+            {[
+              { id: 'TODOS', label: 'Todos' },
+              { id: 'PENDENTE', label: '⏳ Pendentes' },
+              { id: 'ATRASADO', label: '🚨 Atrasadas' },
+              { id: 'BAIXADA', label: '✅ Liquidadas' },
+            ].map(chip => (
+              <button
+                key={chip.id}
+                onClick={() => setFiltroStatusRapido(chip.id as any)}
+                className={cn(
+                  "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap",
+                  filtroStatusRapido === chip.id
+                    ? "bg-on-surface text-surface-container-lowest shadow-xs"
+                    : "bg-surface-container-low text-on-surface-variant hover:text-on-surface border border-outline-variant/40"
+                )}
+              >
+                {chip.label}
+              </button>
+            ))}
+
+            <div className="h-4 w-px bg-outline-variant/40 mx-1 hidden sm:block" />
+
+            {/* Toggle de Filtros Avançados por Coluna */}
+            <button
+              onClick={() => setMostrarFiltrosColunas(prev => !prev)}
+              className={cn(
+                "p-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors border shrink-0",
+                mostrarFiltrosColunas 
+                  ? "bg-primary-container text-on-primary border-primary-container"
+                  : "bg-surface-container-low text-on-surface-variant border-outline-variant/40 hover:text-on-surface"
+              )}
+              title="Alternar filtros individuais de coluna"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span className="text-[10px] uppercase font-black tracking-wider hidden md:inline">Colunas</span>
+            </button>
+          </div>
         </div>
       </section>
 
-      {/* Table Actions / Feedback */}
-      <div className="flex items-center justify-between -mb-4 relative z-10 animate-in fade-in slide-in-from-top-2 duration-300">
+      {/* 3. Ações de Tabela & Agrupamento por Esfera */}
+      <div className="flex items-center justify-between -mb-4 relative z-10">
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setResumoAtivo(prev => prev === 'contexto' ? null : 'contexto')}
@@ -395,8 +547,8 @@ export default function LancamentosPage() {
         {Object.keys(colWidths).length > 0 && (
           <button 
             onClick={() => setColWidths({})}
-            className="flex items-center gap-1.5 text-[10px] uppercase font-black tracking-widest text-on-surface-variant hover:text-primary-container transition-colors py-1.5 px-3 bg-surface-container-lowest border border-outline-variant rounded-t-md shadow-sm border-b-0 translate-y-px"
-            title="Restaurar larguras de coluna padrão"
+            className="flex items-center gap-1.5 text-[10px] uppercase font-black tracking-widest text-on-surface-variant hover:text-primary-container transition-colors py-1.5 px-3 bg-surface-container-lowest border border-outline-variant rounded-t-md shadow-xs border-b-0 translate-y-px"
+            title="Restaurar larguras padrão"
           >
             <RotateCcw className="w-3 h-3" />
             Restaurar Colunas
@@ -404,8 +556,8 @@ export default function LancamentosPage() {
         )}
       </div>
 
-      {/* Data Table Container */}
-      <section className="bg-surface-container-lowest border border-outline-variant rounded-md overflow-hidden shadow-sm relative z-20">
+      {/* 4. Tabela de Lançamentos Desktop (hidden on mobile) */}
+      <section className="hidden md:block bg-surface-container-lowest border border-outline-variant rounded-md overflow-hidden shadow-xs relative z-20">
         <div className="overflow-x-auto">
           <table ref={tableRef} className="w-full text-left">
             <thead>
@@ -415,7 +567,7 @@ export default function LancamentosPage() {
                     type="checkbox" 
                     checked={filtered.length > 0 && selecionados.size === filtered.length}
                     onChange={toggleTodos}
-                    className="w-4 h-4 rounded border-outline-variant text-primary-container focus:ring-primary-container"
+                    className="w-4 h-4 rounded border-outline-variant text-primary-container focus:ring-primary-container cursor-pointer"
                   />
                 </th>
                 <th 
@@ -453,6 +605,7 @@ export default function LancamentosPage() {
                   </div>
                   <FilterInput column="nome" />
                 </th>
+
                 <th 
                   className="px-4 py-4 cursor-pointer group hover:bg-surface-container transition-colors relative"
                   onClick={() => handleSort('parcela')}
@@ -465,17 +618,13 @@ export default function LancamentosPage() {
                   </div>
                   <FilterInput column="parcela" />
                 </th>
-                <th className="px-4 py-4 text-center relative" style={getColumnStyle('resumo_divida')}>
-                  <ColumnResizer index={3} columnKey="resumo_divida" />
-                  <span className="opacity-60 truncate block">Resumo da Dívida</span>
-                  <div className="mt-2 h-[22px]" />
-                </th>
+
                 <th 
                   className="px-4 py-4 cursor-pointer group hover:bg-surface-container transition-colors relative"
                   onClick={() => handleSort('categoria')}
                   style={getColumnStyle('categoria')}
                 >
-                  <ColumnResizer index={4} columnKey="categoria" />
+                  <ColumnResizer index={3} columnKey="categoria" />
                   <div className="flex flex-col gap-1.5 w-full">
                     <div className="flex items-start">
                       <ResumoButton column="categoria" />
@@ -487,46 +636,49 @@ export default function LancamentosPage() {
                   </div>
                   <FilterInput column="categoria" />
                 </th>
+
                 <th 
                   className="px-4 py-4 cursor-pointer group hover:bg-surface-container transition-colors relative"
                   onClick={() => handleSort('contato')}
                   style={getColumnStyle('contato')}
                 >
-                  <ColumnResizer index={5} columnKey="contato" />
+                  <ColumnResizer index={4} columnKey="contato" />
                   <div className="flex flex-col gap-1.5 w-full">
                     <div className="flex items-start">
                       <ResumoButton column="contato" />
                     </div>
                     <div className="flex items-center justify-between gap-2 w-full overflow-hidden">
-                      <span className="truncate">Contato</span>
+                      <span className="truncate">Contato / Favorecido</span>
                       <SortIcon column="contato" />
                     </div>
                   </div>
                   <FilterInput column="contato" />
                 </th>
+
                 <th 
                   className="px-4 py-4 cursor-pointer group hover:bg-surface-container transition-colors relative"
                   onClick={() => handleSort('onde_pagar')}
                   style={getColumnStyle('onde_pagar')}
                 >
-                  <ColumnResizer index={6} columnKey="onde_pagar" />
+                  <ColumnResizer index={5} columnKey="onde_pagar" />
                   <div className="flex flex-col gap-1.5 w-full">
                     <div className="flex items-start">
                       <ResumoButton column="onde_pagar" />
                     </div>
                     <div className="flex items-center justify-between gap-2 w-full overflow-hidden">
-                      <span className="truncate">Onde Pagar</span>
+                      <span className="truncate">Conta / Local</span>
                       <SortIcon column="onde_pagar" />
                     </div>
                   </div>
                   <FilterInput column="onde_pagar" />
                 </th>
+
                 <th 
                   className="px-4 py-4 cursor-pointer group hover:bg-surface-container transition-colors relative"
                   onClick={() => handleSort('natureza')}
                   style={getColumnStyle('natureza')}
                 >
-                  <ColumnResizer index={7} columnKey="natureza" />
+                  <ColumnResizer index={6} columnKey="natureza" />
                   <div className="flex flex-col gap-1.5 w-full">
                     <div className="flex items-start">
                       <ResumoButton column="natureza" />
@@ -538,41 +690,44 @@ export default function LancamentosPage() {
                   </div>
                   <FilterInput column="natureza" />
                 </th>
+
                 <th 
                   className="px-4 py-4 cursor-pointer group hover:bg-surface-container transition-colors relative"
                   onClick={() => handleSort('recorrencia')}
                   style={getColumnStyle('recorrencia')}
                 >
-                  <ColumnResizer index={8} columnKey="recorrencia" />
+                  <ColumnResizer index={7} columnKey="recorrencia" />
                   <div className="flex flex-col gap-1.5 w-full">
                     <div className="flex items-start">
                       <ResumoButton column="recorrencia" />
                     </div>
                     <div className="flex items-center justify-between gap-2 w-full overflow-hidden">
-                      <span className="truncate">Recorrência</span>
+                      <span className="truncate">Tipo</span>
                       <SortIcon column="recorrencia" />
                     </div>
                   </div>
                   <FilterInput column="recorrencia" />
                 </th>
+
                 <th 
                   className="px-6 py-4 cursor-pointer group hover:bg-surface-container transition-colors text-right relative"
                   onClick={() => handleSort('valor')}
                   style={getColumnStyle('valor')}
                 >
-                  <ColumnResizer index={9} columnKey="valor" />
+                  <ColumnResizer index={8} columnKey="valor" />
                   <div className="flex items-center justify-end gap-2 overflow-hidden">
                     <span className="truncate">Valor</span>
                     <SortIcon column="valor" />
                   </div>
                   <FilterInput column="valor" />
                 </th>
+
                 <th 
-                  className="px-4 py-4 cursor-pointer group hover:bg-surface-container transition-colors relative"
+                  className="px-4 py-4 cursor-pointer group hover:bg-surface-container transition-colors relative text-center"
                   onClick={() => handleSort('status')}
                   style={getColumnStyle('status')}
                 >
-                  <ColumnResizer index={10} columnKey="status" />
+                  <ColumnResizer index={9} columnKey="status" />
                   <div className="flex flex-col gap-1.5 w-full items-center">
                     <div className="flex items-start">
                       <ResumoButton column="status" />
@@ -590,7 +745,9 @@ export default function LancamentosPage() {
             <tbody className="divide-y divide-outline-variant">
               {isLoading ? (
                 <tr>
-                  <td colSpan={12} className="py-20 text-center animate-pulse font-bold text-on-surface-variant uppercase tracking-widest text-xs">Sincronizando Dados...</td>
+                  <td colSpan={12} className="py-20 text-center animate-pulse font-bold text-on-surface-variant uppercase tracking-widest text-xs">
+                    Sincronizando Dados Financeiros...
+                  </td>
                 </tr>
               ) : resumoAtivo ? (
                 groupedData.map((group) => (
@@ -632,7 +789,25 @@ export default function LancamentosPage() {
                 ))
               ) : sortedData.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="py-20 text-center text-on-surface-variant font-medium opacity-40">Nenhuma transação encontrada.</td>
+                  <td colSpan={12} className="py-24 text-center">
+                    <div className="max-w-sm mx-auto space-y-4">
+                      <div className="w-16 h-16 rounded-2xl bg-surface-container-high mx-auto flex items-center justify-center text-outline">
+                        <Calendar className="w-8 h-8 opacity-40" />
+                      </div>
+                      <div>
+                        <p className="text-base font-black text-on-surface">Nenhuma movimentação encontrada</p>
+                        <p className="text-xs font-medium text-on-surface-variant opacity-70 mt-1">
+                          Não há registros para os filtros selecionados neste mês.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => abrirModal('CRIAR_LANCAMENTO')}
+                        className="bg-primary-container text-on-primary px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
+                      >
+                        <Plus className="w-4 h-4" /> Cadastrar Lançamento
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ) : (
                 sortedData.map((oc) => (
@@ -643,18 +818,18 @@ export default function LancamentosPage() {
                       selecionados.has(oc.id) && "bg-primary-container/5 hover:bg-primary-container/10"
                     )}
                   >
-                    <td className="px-4 py-5 text-center">
+                    <td className="px-4 py-4 text-center">
                       <input 
                         type="checkbox" 
                         checked={selecionados.has(oc.id)}
                         onChange={() => toggleSelecao(oc.id)}
-                        className="w-4 h-4 rounded border-outline-variant text-primary-container focus:ring-primary-container"
+                        className="w-4 h-4 rounded border-outline-variant text-primary-container focus:ring-primary-container cursor-pointer"
                       />
                     </td>
-                    <td className="px-4 py-5 text-sm font-medium text-on-surface tnum">
+                    <td className="px-4 py-4 text-sm font-semibold text-on-surface tnum">
                       {new Date(oc.data_vencimento + "T12:00:00").toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                     </td>
-                    <td className="px-4 py-5">
+                    <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
                         <div className="font-bold text-on-surface text-sm">{oc.nome}</div>
                         {oc.contexto === 'EMPRESA' ? (
@@ -682,46 +857,31 @@ export default function LancamentosPage() {
                       </div>
                       <div className="text-[9px] text-on-surface-variant font-medium opacity-60 uppercase tracking-tighter mt-0.5">Ref: {oc.id.substring(0,8)}</div>
                     </td>
-                    <td className="px-4 py-5 text-center text-[10px] font-black text-on-surface-variant">
+                    <td className="px-4 py-4 text-center text-[10px] font-black text-on-surface-variant">
                       {oc.total_parcelas ? `${oc.numero_parcela}/${oc.total_parcelas}` : '—'}
                     </td>
-                    <td className="px-4 py-5">
-                      {oc.tipo === 'PARCELA' && oc.financeiro_stats ? (
-                        <div className="flex flex-col gap-0.5 min-w-[120px]">
-                          <p className="text-[10px] font-black text-on-surface tracking-tight tnum">
-                            Total: {formatarMoeda(oc.financeiro_stats.total)}
-                          </p>
-                          <p className="text-[9px] font-bold text-primary-container/80 tnum">
-                            Pago: {formatarMoeda(oc.financeiro_stats.pago)}
-                          </p>
-                          <p className="text-[9px] font-bold text-error/80 tnum">
-                            Falta: {formatarMoeda(oc.financeiro_stats.restante)}
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] font-medium text-on-surface-variant opacity-20">—</span>
-                      )}
+                    <td className="px-4 py-4">
+                      <span className="text-xs font-semibold px-2.5 py-1 rounded-sm bg-surface-container-low text-on-surface-variant border border-outline-variant/30">
+                        {oc.categoria?.nome || 'Geral'}
+                      </span>
                     </td>
-                    <td className="px-4 py-5">
-                      <span className="text-sm font-medium text-on-surface-variant">{oc.categoria?.nome || 'Inespecífico'}</span>
-                    </td>
-                    <td className="px-4 py-5">
+                    <td className="px-4 py-4">
                       <span className="text-sm font-medium text-on-surface-variant italic">{oc.contato?.nome || 'Particular'}</span>
                     </td>
-                    <td className="px-4 py-5">
+                    <td className="px-4 py-4">
                       <span className="text-sm font-medium text-on-surface-variant">{oc.onde_pagar || '—'}</span>
                     </td>
-                    <td className="px-4 py-5">
+                    <td className="px-4 py-4">
                       <span className={cn(
-                        "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                        oc.natureza === 'ENTRADA' ? "bg-primary-fixed/40 text-primary-container" : "bg-error-container/40 text-error"
+                        "inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest",
+                        oc.natureza === 'ENTRADA' ? "bg-primary-fixed/50 text-primary-container" : "bg-error-container/40 text-error"
                       )}>
                         {oc.natureza}
                       </span>
                     </td>
-                    <td className="px-4 py-5">
+                    <td className="px-4 py-4">
                       <span className={cn(
-                        "text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-sm border",
+                        "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm border",
                         oc.tipo === 'FIXA' ? "border-primary-container/30 text-primary-container bg-primary-container/5" :
                         oc.tipo === 'PARCELA' ? "border-amber-500/30 text-amber-600 bg-amber-500/5" :
                         "border-outline-variant text-on-surface-variant opacity-60"
@@ -729,12 +889,12 @@ export default function LancamentosPage() {
                         {oc.tipo === 'FIXA' ? 'Mensal' : oc.tipo === 'PARCELA' ? 'Parcelado' : 'Único'}
                       </span>
                     </td>
-                    <td className="px-4 py-5 text-right font-black tnum text-base">
+                    <td className="px-4 py-4 text-right font-black tnum text-base">
                       <span className={oc.natureza === 'ENTRADA' ? "text-primary-container" : "text-error"}>
                         {oc.natureza === 'ENTRADA' ? '+' : '-'} {formatarMoeda(oc.valor_editado ?? oc.valor)}
                       </span>
                     </td>
-                    <td className="px-4 py-5 text-center">
+                    <td className="px-4 py-4 text-center">
                       <div className="flex justify-center">
                         {(() => {
                           const statusVisual = getStatusVisual(oc);
@@ -745,7 +905,7 @@ export default function LancamentosPage() {
                             <button
                               onClick={() => abrirModal(isBaixada ? 'DESBAIXAR' : 'BAIXAR', oc.id)}
                               className={cn(
-                                "p-2 rounded-full transition-all hover:scale-110",
+                                "p-2 rounded-full transition-all hover:scale-110 cursor-pointer",
                                 isBaixada 
                                   ? "text-primary-container bg-primary-container/10 hover:bg-primary-container/20" 
                                   : isVencido
@@ -766,25 +926,25 @@ export default function LancamentosPage() {
                         })()}
                       </div>
                     </td>
-                    <td className="px-4 py-5 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-100 transition-opacity">
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => abrirModal('EDITAR_LANCAMENTO', `${oc.regra_id}:${oc.id}`)}
-                          className="p-2 text-outline hover:text-primary transition-colors hover:bg-primary/5 rounded-md"
+                          className="p-1.5 text-outline hover:text-primary transition-colors hover:bg-primary/5 rounded-md cursor-pointer"
                           title="Editar Lançamento"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => abrirModal('DUPLICAR_LANCAMENTO', oc.regra_id)}
-                          className="p-2 text-outline hover:text-primary transition-colors hover:bg-primary/5 rounded-md"
+                          className="p-1.5 text-outline hover:text-primary transition-colors hover:bg-primary/5 rounded-md cursor-pointer"
                           title="Duplicar Lançamento"
                         >
                           <Copy className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => abrirModal('EXCLUIR_LANCAMENTO', `${oc.regra_id}:${oc.id}`)}
-                          className="p-2 text-outline hover:text-error transition-colors hover:bg-error/5 rounded-md"
+                          className="p-1.5 text-outline hover:text-error transition-colors hover:bg-error/5 rounded-md cursor-pointer"
                           title="Excluir Lançamento"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -797,29 +957,148 @@ export default function LancamentosPage() {
             </tbody>
           </table>
         </div>
+        
         {/* Pagination */}
-        <div className="p-6 border-t border-outline-variant flex justify-between items-center bg-surface-container-low/30">
-          <span className="text-xs font-bold text-on-surface-variant">Mostrando 1-{filtered.length} de {filtered.length} transações</span>
-          <div className="flex gap-2">
-            <button className="px-4 py-2 border border-outline-variant rounded-md text-xs font-bold text-on-surface-variant hover:bg-surface-container transition-all disabled:opacity-30" disabled>Anterior</button>
-            <button className="px-4 py-2 border border-outline-variant rounded-md text-xs font-bold text-on-surface-variant hover:bg-surface-container transition-all disabled:opacity-30" disabled>Próxima</button>
+        <div className="p-4 border-t border-outline-variant flex justify-between items-center bg-surface-container-low/30">
+          <span className="text-xs font-bold text-on-surface-variant">Mostrando {filtered.length} transações no período</span>
+          <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant opacity-60">
+            {contextoAtivo === 'TODOS' ? 'Visão Consolidada' : contextoAtivo === 'PESSOAL' ? 'Filtro: Vida Pessoal (PF)' : 'Filtro: Empresa (PJ)'}
           </div>
         </div>
       </section>
 
-      {/* Dynamic Selection Summary Bar */}
+      {/* 5. Mobile Native Card Feed (md:hidden) */}
+      <section className="md:hidden space-y-3">
+        {isLoading ? (
+          <div className="py-20 text-center font-bold text-xs uppercase tracking-widest animate-pulse text-on-surface-variant">
+            Sincronizando Dados...
+          </div>
+        ) : sortedData.length === 0 ? (
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-md p-8 text-center space-y-3">
+            <p className="text-sm font-bold text-on-surface">Nenhuma movimentação encontrada</p>
+            <p className="text-xs text-on-surface-variant opacity-70">Que tal cadastrar sua primeira transação?</p>
+            <button
+              onClick={() => abrirModal('CRIAR_LANCAMENTO')}
+              className="bg-primary-container text-on-primary px-4 py-2 rounded-md font-bold text-xs uppercase tracking-wider inline-flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" /> Novo Lançamento
+            </button>
+          </div>
+        ) : (
+          sortedData.map((oc) => {
+            const statusVisual = getStatusVisual(oc);
+            const isBaixada = statusVisual === 'BAIXADA';
+            const isVencido = statusVisual === 'ATRASADO';
+
+            return (
+              <div 
+                key={oc.id}
+                className={cn(
+                  "bg-surface-container-lowest border border-outline-variant rounded-md p-4 shadow-xs space-y-3",
+                  isBaixada && "opacity-80 bg-surface-container-low/20"
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={cn(
+                        "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider",
+                        oc.contexto === 'EMPRESA' 
+                          ? "bg-primary-fixed/60 text-primary-container border border-primary-container/20"
+                          : "bg-surface-container-high text-on-surface-variant"
+                      )}>
+                        {oc.contexto === 'EMPRESA' ? '🏢 PJ' : '👤 PF'}
+                      </span>
+                      <span className="text-[10px] font-bold text-on-surface-variant">
+                        {new Date(oc.data_vencimento + "T12:00:00").toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                      </span>
+                      {oc.total_parcelas && (
+                        <span className="text-[10px] font-black text-on-surface-variant opacity-60">
+                          {oc.numero_parcela}/{oc.total_parcelas}
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-bold text-on-surface text-sm truncate">{oc.nome}</p>
+                    <p className="text-xs font-medium text-on-surface-variant opacity-70">
+                      {oc.categoria?.nome || 'Geral'} • {oc.contato?.nome || 'Particular'}
+                    </p>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <p className={cn(
+                      "font-black text-base tnum",
+                      oc.natureza === 'ENTRADA' ? "text-primary-container" : "text-error"
+                    )}>
+                      {oc.natureza === 'ENTRADA' ? '+' : '-'} {formatarMoeda(oc.valor_editado ?? oc.valor)}
+                    </p>
+                    <span className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider mt-1",
+                      isBaixada ? "bg-primary-container/10 text-primary-container" :
+                      isVencido ? "bg-error/10 text-error" : "bg-amber-500/10 text-amber-600"
+                    )}>
+                      {isBaixada ? "Liquidado" : isVencido ? "Atrasado" : "Pendente"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Ações Rápidas no Card Mobile */}
+                <div className="flex items-center justify-between pt-2 border-t border-outline-variant/30">
+                  <button
+                    onClick={() => abrirModal(isBaixada ? 'DESBAIXAR' : 'BAIXAR', oc.id)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition-colors",
+                      isBaixada 
+                        ? "bg-surface-container-high text-on-surface" 
+                        : "bg-primary-container text-on-primary"
+                    )}
+                  >
+                    {isBaixada ? <RotateCcw className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    <span>{isBaixada ? "Reverter" : oc.natureza === 'ENTRADA' ? "Recebido" : "Pagar"}</span>
+                  </button>
+
+                  <div className="flex items-center gap-1 text-on-surface-variant">
+                    <button 
+                      onClick={() => abrirModal('EDITAR_LANCAMENTO', `${oc.regra_id}:${oc.id}`)}
+                      className="p-1.5 hover:bg-surface-container rounded"
+                      title="Editar"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => abrirModal('DUPLICAR_LANCAMENTO', oc.regra_id)}
+                      className="p-1.5 hover:bg-surface-container rounded"
+                      title="Duplicar"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => abrirModal('EXCLUIR_LANCAMENTO', `${oc.regra_id}:${oc.id}`)}
+                      className="p-1.5 hover:bg-surface-container rounded text-error"
+                      title="Excluir"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </section>
+
+      {/* 6. Barra Flutuante de Seleção em Lote */}
       {selecionados.size > 0 && (
-        <div className="fixed bottom-44 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-8 duration-500">
-          <div className="bg-on-surface text-surface-container-lowest px-8 py-4 rounded-2xl shadow-2xl border border-outline/20 flex items-center gap-8 backdrop-blur-md bg-opacity-95">
-            <div className="flex items-center gap-3 pr-8 border-r border-outline-variant/30">
-              <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-black">
+        <div className="fixed bottom-28 md:bottom-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-8 duration-300 w-[90%] max-w-2xl">
+          <div className="bg-on-surface text-surface-container-lowest px-6 py-4 rounded-xl shadow-2xl border border-outline/20 flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur-md bg-opacity-95">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-black text-sm">
                 {selecionados.size}
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Selecionados</p>
                 <button 
                   onClick={() => setSelecionados(new Set())}
-                  className="text-xs font-bold text-primary-container hover:underline"
+                  className="text-xs font-bold text-primary-container hover:underline cursor-pointer"
                 >
                   Limpar Seleção
                 </button>
@@ -832,34 +1111,14 @@ export default function LancamentosPage() {
                 const val = oc.valor_editado ?? oc.valor;
                 if (oc.natureza === 'ENTRADA') acc.entradas += val;
                 else acc.saidas += val;
-                
-                // Impacto mensal (valor base da regra)
-                acc.impacto += Number(oc.valor_base || 0);
-                
-                // Total em aberto (stats de parcela)
-                if (oc.financeiro_stats) {
-                   acc.pendente += oc.financeiro_stats.restante;
-                } else if (oc.status === 'PENDENTE') {
-                   acc.pendente += val;
-                }
-
                 return acc;
-              }, { entradas: 0, saidas: 0, impacto: 0, pendente: 0 });
+              }, { entradas: 0, saidas: 0 });
 
               return (
-                <div className="flex items-center gap-10">
-                  <div className="text-center">
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Impacto Mensal</p>
-                    <p className="font-black text-lg text-primary-container tnum">{formatarMoeda(calc.impacto)}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Total Pendente</p>
-                    <p className="font-black text-lg text-error tnum">{formatarMoeda(calc.pendente)}</p>
-                  </div>
-                  <div className="w-px h-8 bg-outline-variant/30" />
+                <div className="flex items-center gap-6">
                   <div className="text-right">
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Saldo Selecionado</p>
-                    <p className={cn("font-black text-2xl tracking-tighter tnum", (calc.entradas - calc.saidas) >= 0 ? "text-primary-container" : "text-error")}>
+                    <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-0.5">Saldo Selecionado</p>
+                    <p className={cn("font-black text-xl tracking-tight tnum", (calc.entradas - calc.saidas) >= 0 ? "text-primary-container" : "text-error")}>
                       {calc.entradas - calc.saidas >= 0 ? '+' : ''}{formatarMoeda(calc.entradas - calc.saidas)}
                     </p>
                   </div>
@@ -870,47 +1129,29 @@ export default function LancamentosPage() {
         </div>
       )}
 
-      {/* Official Sticky Footer */}
-      <footer className="fixed bottom-20 md:bottom-0 right-0 left-0 md:left-64 bg-surface-container-low/90 backdrop-blur-xl border-t border-outline-variant p-6 md:p-8 z-30 shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.03)]">
-        <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-12">
-            <div className="text-center">
-              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5">Total Entradas (Período)</p>
-              <p className="font-black text-lg text-primary-container tnum">+{formatarMoeda(totais.entradas)}</p>
+      {/* 7. Sticky Footer com Totais Consolidados */}
+      <footer className="fixed bottom-0 right-0 left-0 md:left-64 bg-surface-container-low/95 backdrop-blur-xl border-t border-outline-variant p-4 md:p-6 z-30 shadow-[0_-10px_30px_-5px_rgba(0,0,0,0.03)]">
+        <div className="max-w-[1800px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-8">
+          <div className="flex items-center gap-8">
+            <div className="text-center sm:text-left">
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Entradas do Mês</p>
+              <p className="font-black text-base md:text-lg text-primary-container tnum">+{formatarMoeda(totais.entradasTotal)}</p>
             </div>
-            <div className="w-px h-10 bg-outline-variant" />
-            <div className="text-center">
-              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5">Total Saídas (Período)</p>
-              <p className="font-black text-lg text-error tnum">-{formatarMoeda(totais.saidas)}</p>
-            </div>
-          </div>
-
-          {/* New Section: Gestão de Baixas */}
-          <div className="flex items-center gap-8 px-12 border-x border-outline-variant">
-            <div className="text-center">
-              <div className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-primary" />
-                Valor Já Pago
-              </div>
-              <p className="font-black text-xl text-on-surface tnum">{formatarMoeda(totais.baixado)}</p>
-            </div>
-            <div className="text-center">
-              <div className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-error animate-pulse" />
-                Falta Pagar
-              </div>
-              <p className="font-black text-xl text-error tnum">{formatarMoeda(totais.pendente)}</p>
+            <div className="w-px h-8 bg-outline-variant" />
+            <div className="text-center sm:text-left">
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">Saídas do Mês</p>
+              <p className="font-black text-base md:text-lg text-error tnum">-{formatarMoeda(totais.saidasTotal)}</p>
             </div>
           </div>
 
-          <div className="text-right">
-            <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-1.5">SALDO DO PERÍODO</p>
-            <div className="flex items-center gap-4">
-              <span className={cn("text-3xl font-black tracking-tighter tnum", (totais.entradas - totais.saidas) >= 0 ? "text-primary-container" : "text-error")}>
-                {formatarMoeda(totais.entradas - totais.saidas)}
-              </span>
-              <TrendingUp className={cn("w-6 h-6", (totais.entradas - totais.saidas) >= 0 ? "text-primary-container" : "text-error rotate-180")} />
+          <div className="flex items-center gap-4 text-right">
+            <div>
+              <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest mb-0.5">SALDO PREVISTO</p>
+              <p className={cn("text-xl md:text-2xl font-black tracking-tighter tnum", saldoProjetado >= 0 ? "text-primary-container" : "text-error")}>
+                {saldoProjetado >= 0 ? '+' : ''}{formatarMoeda(saldoProjetado)}
+              </p>
             </div>
+            <TrendingUp className={cn("w-6 h-6", saldoProjetado >= 0 ? "text-primary-container" : "text-error rotate-180")} />
           </div>
         </div>
       </footer>
