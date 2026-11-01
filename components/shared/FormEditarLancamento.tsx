@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useCategorias } from "@/hooks/useCategorias";
 import { useContatos } from "@/hooks/useContatos";
 import { useLocaisPagamento } from "@/hooks/useLocaisPagamento";
-import { useLancamento } from "@/hooks/useLancamentos";
+import { useLancamento, useUpdateLancamento } from "@/hooks/useLancamentos";
 import { useUIStore } from "@/stores/useUIStore";
 import { 
   ArrowRight, 
@@ -13,7 +13,8 @@ import {
   Tag,
   User,
   AlertCircle,
-  Plus
+  Plus,
+  Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ModalEscopoEdicao } from "./ModalEscopoEdicao";
@@ -21,8 +22,9 @@ import { FormCriarCategoriaInline, FormCriarContatoInline, FormCriarLocalPagamen
 
 export function FormEditarLancamento() {
   const { idSelecionado, fecharModal } = useUIStore();
-  const [regraId] = (idSelecionado || "").split(":");
+  const [regraId, idOcorrenciaRef] = (idSelecionado || "").split(":");
   const { data: lancamento, isLoading: isLoadingLanc } = useLancamento(regraId || idSelecionado);
+  const updateLancamento = useUpdateLancamento();
   const { data: categorias } = useCategorias();
   const { data: contatos } = useContatos();
   const { data: locaisPagamento } = useLocaisPagamento();
@@ -43,6 +45,7 @@ export function FormEditarLancamento() {
   
   const [showEscopo, setShowEscopo] = useState(false);
   const [dadosParaSalvar, setDadosParaSalvar] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (lancamento) {
@@ -58,7 +61,7 @@ export function FormEditarLancamento() {
     }
   }, [lancamento]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const dados = {
@@ -73,12 +76,28 @@ export function FormEditarLancamento() {
       total_parcelas: tipo === "PARCELA" ? parseInt(totalParcelas) : null,
     };
 
-    if (lancamento?.tipo === "ESPORADICA") {
-      // Se for único, o escopo é implícito (APENAS_ESTE)
-      setDadosParaSalvar({ ...dados, escopo: "APENAS_ESTE", idOcorrenciaRef: idSelecionado });
-      setShowEscopo(true); // Ainda mostramos para confirmação ou podemos pular
+    if (lancamento?.tipo === "ESPORADICA" && tipo === "ESPORADICA") {
+      try {
+        setIsSaving(true);
+        await updateLancamento.mutateAsync({
+          id: lancamento.id,
+          data: {
+            ...dados,
+            escopo: "TODOS",
+            idOcorrenciaRef: idOcorrenciaRef || null,
+          }
+        });
+        fecharModal();
+      } catch (err) {
+        console.error("Erro ao salvar lançamento esporádico:", err);
+      } finally {
+        setIsSaving(false);
+      }
     } else {
-      setDadosParaSalvar(dados);
+      setDadosParaSalvar({
+        ...dados,
+        idOcorrenciaRef: idOcorrenciaRef || null,
+      });
       setShowEscopo(true);
     }
   };
@@ -320,17 +339,36 @@ export function FormEditarLancamento() {
         )}
       </div>
 
-      <div className="p-4 bg-primary-fixed/10 border border-primary/10 rounded-md flex gap-4 items-center">
-        <AlertCircle className="w-5 h-5 text-primary-container" />
-        <p className="text-[10px] font-bold text-primary-container leading-relaxed">
-          Você está editando a regra principal do lançamento. Na próxima etapa, você escolherá quais parcelas serão afetadas.
-        </p>
-      </div>
+      {lancamento?.tipo !== "ESPORADICA" && (
+        <div className="p-4 bg-primary-fixed/10 border border-primary/10 rounded-md flex gap-4 items-center">
+          <AlertCircle className="w-5 h-5 text-primary-container" />
+          <p className="text-[10px] font-bold text-primary-container leading-relaxed">
+            Você está editando a regra principal do lançamento. Na próxima etapa, você escolherá quais parcelas serão afetadas.
+          </p>
+        </div>
+      )}
 
       <button 
-        className="w-full bg-primary-container text-on-primary py-4 rounded-xl font-black text-sm flex items-center justify-center gap-3 hover:opacity-90 transition-all shadow-xl"
+        type="submit"
+        disabled={isSaving}
+        className="w-full bg-primary-container text-on-primary py-4 rounded-xl font-black text-sm flex items-center justify-center gap-3 hover:opacity-90 transition-all shadow-xl disabled:opacity-50"
       >
-        Continuar para Escopo <ArrowRight className="w-5 h-5" />
+        {isSaving ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Salvando Alterações...</span>
+          </>
+        ) : lancamento?.tipo === "ESPORADICA" && tipo === "ESPORADICA" ? (
+          <>
+            <span>Salvar Alterações</span>
+            <Check className="w-5 h-5" />
+          </>
+        ) : (
+          <>
+            <span>Continuar para Escopo</span>
+            <ArrowRight className="w-5 h-5" />
+          </>
+        )}
       </button>
         </form>
       )}

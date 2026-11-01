@@ -36,6 +36,8 @@ export function useUpdateLancamento() {
       queryClient.invalidateQueries({ queryKey: ['ocorrencias'] });
       queryClient.invalidateQueries({ queryKey: ['lancamentos'] });
       queryClient.invalidateQueries({ queryKey: ['contatos'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['variaveis'] });
     },
   });
 }

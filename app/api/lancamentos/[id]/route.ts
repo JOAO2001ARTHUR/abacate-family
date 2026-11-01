@@ -39,8 +39,10 @@ export async function PUT(
   const body = await request.json();
   const { escopo, idOcorrenciaRef, ...dadosLancamento } = body;
 
-  // 1. Atualizar o lançamento principal (a regra) - Exceto se for edição de ocorrência única
-  if (escopo !== "APENAS_ESTE") {
+  // 1. Atualizar o lançamento principal (a regra) - Sempre atualiza se for ESPORADICA ou se escopo não for APENAS_ESTE
+  const deveAtualizarLancamentoCompleto = escopo !== "APENAS_ESTE" || dadosLancamento.tipo === "ESPORADICA";
+
+  if (deveAtualizarLancamentoCompleto) {
     const updatePayload: any = {
       nome: dadosLancamento.nome,
       categoria_id: dadosLancamento.categoria_id,
@@ -112,10 +114,17 @@ export async function PUT(
         }
       }
     }
+  } else if (dadosLancamento.contexto) {
+    // Se for edição pontual de ocorrência mas o contexto foi alterado, atualiza o contexto na regra
+    await supabase
+      .from("lancamentos")
+      .update({ contexto: dadosLancamento.contexto })
+      .eq("id", id)
+      .eq("user_id", user.id);
   }
 
   // 2. Atualizar as ocorrências vinculadas conforme o escopo
-  if (escopo && idOcorrenciaRef) {
+  if (escopo && idOcorrenciaRef && escopo !== "TODOS") {
     // Buscar a ocorrência de referência para saber a data/parcela
     const { data: ocRef } = await supabase
       .from("ocorrencias")
@@ -139,13 +148,12 @@ export async function PUT(
       } else if (escopo === "ESTE_E_ANTERIORES") {
         query = query.lte("data_vencimento", ocRef.data_vencimento);
       }
-      // "TODOS" não precisa de filtro extra além do lancamento_id
 
       const { error: oError } = await query;
       if (oError) return NextResponse.json({ error: oError.message }, { status: 500 });
     }
-  } else if (escopo === "TODOS") {
-    // Caso especial: se não temos idOcorrenciaRef mas o escopo é TODOS (raro via UI atual)
+  } else if (escopo === "TODOS" || dadosLancamento.tipo === "ESPORADICA") {
+    // Atualiza todas as ocorrências deste lançamento
     const { error: oError } = await supabase
       .from("ocorrencias")
       .update({ 
