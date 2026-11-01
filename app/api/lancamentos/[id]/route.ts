@@ -41,21 +41,35 @@ export async function PUT(
 
   // 1. Atualizar o lançamento principal (a regra) - Exceto se for edição de ocorrência única
   if (escopo !== "APENAS_ESTE") {
-    const { error: lError } = await supabase
+    const updatePayload: any = {
+      nome: dadosLancamento.nome,
+      categoria_id: dadosLancamento.categoria_id,
+      contato_id: dadosLancamento.contato_id,
+      local_pagamento_id: dadosLancamento.local_pagamento_id,
+      valor_base: dadosLancamento.valor_base,
+      natureza: dadosLancamento.natureza,
+      tipo: dadosLancamento.tipo,
+      total_parcelas: dadosLancamento.total_parcelas,
+    };
+    if (dadosLancamento.contexto) {
+      updatePayload.contexto = dadosLancamento.contexto;
+    }
+
+    let { error: lError } = await supabase
       .from("lancamentos")
-      .update({
-        nome: dadosLancamento.nome,
-        categoria_id: dadosLancamento.categoria_id,
-        contato_id: dadosLancamento.contato_id,
-        local_pagamento_id: dadosLancamento.local_pagamento_id,
-        valor_base: dadosLancamento.valor_base,
-        natureza: dadosLancamento.natureza,
-        tipo: dadosLancamento.tipo,
-        contexto: dadosLancamento.contexto || 'PESSOAL',
-        total_parcelas: dadosLancamento.total_parcelas,
-      })
+      .update(updatePayload)
       .eq("id", id)
       .eq("user_id", user.id);
+
+    if (lError && (lError.code === "42703" || lError.message?.includes("contexto"))) {
+      delete updatePayload.contexto;
+      const fallbackRes = await supabase
+        .from("lancamentos")
+        .update(updatePayload)
+        .eq("id", id)
+        .eq("user_id", user.id);
+      lError = fallbackRes.error;
+    }
 
     if (lError) return NextResponse.json({ error: lError.message }, { status: 500 });
 

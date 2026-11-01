@@ -58,9 +58,30 @@ export async function GET(request: Request) {
     ocorrenciasQuery = ocorrenciasQuery.eq("lancamento.contexto", contexto);
   }
 
-  const { data: ocorrencias } = await ocorrenciasQuery;
+  let ocorrencias: any[] = [];
+  const { data: ocData, error: oError } = await ocorrenciasQuery;
+  ocorrencias = ocData || [];
+
+  // Fallback caso a coluna contexto não exista no banco remoto
+  if (oError && (oError.code === "42703" || oError.message?.includes("contexto"))) {
+    const fallbackOcorrencias = await supabase
+      .from("ocorrencias")
+      .select(`
+        lancamento_id,
+        valor,
+        valor_editado,
+        data_vencimento,
+        lancamento:lancamentos!inner (natureza, user_id)
+      `)
+      .eq("lancamento.user_id", user.id)
+      .gte("data_vencimento", dataInicioRange)
+      .lte("data_vencimento", dataFimRange)
+      .is("cancelada", false);
+    ocorrencias = (fallbackOcorrencias.data as any[]) || [];
+  }
 
   // 2. Buscar regras FIXA para projeção futura
+  let regrasFixas: any[] = [];
   let regrasFixasQuery = supabase
     .from("lancamentos")
     .select("id, natureza, valor_base, data_inicio, contexto")
@@ -72,7 +93,19 @@ export async function GET(request: Request) {
     regrasFixasQuery = regrasFixasQuery.eq("contexto", contexto);
   }
 
-  const { data: regrasFixas } = await regrasFixasQuery;
+  const { data: rfData, error: rError } = await regrasFixasQuery;
+  regrasFixas = rfData || [];
+
+  // Fallback caso a coluna contexto não exista
+  if (rError && (rError.code === "42703" || rError.message?.includes("contexto"))) {
+    const fallbackRegras = await supabase
+      .from("lancamentos")
+      .select("id, natureza, valor_base, data_inicio")
+      .eq("user_id", user.id)
+      .eq("tipo", "FIXA")
+      .eq("ativo", true);
+    regrasFixas = (fallbackRegras.data as any[]) || [];
+  }
 
   // Processar dados
   meses.forEach(m => {

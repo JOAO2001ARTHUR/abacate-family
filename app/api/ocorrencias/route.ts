@@ -20,55 +20,90 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let query = supabase
-    .from("ocorrencias")
-    .select(`
-      *,
-      lancamento:lancamentos!inner (
-        id,
-        nome,
-        natureza,
-        tipo,
-        contexto,
-        total_parcelas,
-        data_inicio,
-        valor_base,
-        local_pagamento:locais_pagamento(id, nome),
-        regra_id:id,
-        categoria:categorias (id, nome, cor),
-        contato:contatos (id, nome)
-      )
-    `)
-    .eq("lancamento.user_id", user.id)
-    .is("cancelada", false);
+  const selectComContexto = `
+    *,
+    lancamento:lancamentos!inner (
+      id,
+      nome,
+      natureza,
+      tipo,
+      contexto,
+      total_parcelas,
+      data_inicio,
+      valor_base,
+      local_pagamento:locais_pagamento(id, nome),
+      regra_id:id,
+      categoria:categorias (id, nome, cor),
+      contato:contatos (id, nome)
+    )
+  `;
 
-  if (atrasadas === "true") {
-    const hoje = format(new Date(), "yyyy-MM-dd");
-    query = query.lt("data_vencimento", hoje).eq("status", "PENDENTE");
-  } else if (mes) {
-    const date = parseISO(`${mes}-01`);
-    const start = format(startOfMonth(date), "yyyy-MM-dd");
-    const end = format(endOfMonth(date), "yyyy-MM-dd");
-    
-    query = query.gte("data_vencimento", start).lte("data_vencimento", end);
+  const selectSemContexto = `
+    *,
+    lancamento:lancamentos!inner (
+      id,
+      nome,
+      natureza,
+      tipo,
+      total_parcelas,
+      data_inicio,
+      valor_base,
+      local_pagamento:locais_pagamento(id, nome),
+      regra_id:id,
+      categoria:categorias (id, nome, cor),
+      contato:contatos (id, nome)
+    )
+  `;
+
+  function createOcorrenciasQuery(selectFields: string, filterByContexto: boolean) {
+    let q = (supabase
+      .from("ocorrencias")
+      .select(selectFields) as any)
+      .eq("lancamento.user_id", user!.id)
+      .is("cancelada", false);
+
+    if (atrasadas === "true") {
+      const hoje = format(new Date(), "yyyy-MM-dd");
+      q = q.lt("data_vencimento", hoje).eq("status", "PENDENTE");
+    } else if (mes) {
+      const date = parseISO(`${mes}-01`);
+      const start = format(startOfMonth(date), "yyyy-MM-dd");
+      const end = format(endOfMonth(date), "yyyy-MM-dd");
+      q = q.gte("data_vencimento", start).lte("data_vencimento", end);
+    }
+
+    if (natureza && natureza !== "TODAS") {
+      q = q.eq("lancamento.natureza", natureza);
+    }
+
+    if (contato_id) {
+      q = q.eq("lancamento.contato_id", contato_id);
+    }
+
+    if (filterByContexto && contexto && contexto !== "TODOS") {
+      q = q.eq("lancamento.contexto", contexto);
+    }
+
+    return q.order("data_vencimento", { ascending: true });
   }
 
-  if (natureza && natureza !== "TODAS") {
-    query = query.eq("lancamento.natureza", natureza);
-  }
+  let temColunaContexto = true;
+  let { data, error } = await createOcorrenciasQuery(selectComContexto, true);
 
-  if (contato_id) {
-    query = query.eq("lancamento.contato_id", contato_id);
+  // Se a coluna contexto ainda não foi criada no banco remoto, faz fallback automático
+  if (error && (error.code === "42703" || error.message?.includes("contexto"))) {
+    temColunaContexto = false;
+    const fallbackRes = await createOcorrenciasQuery(selectSemContexto, false);
+    data = fallbackRes.data;
+    error = fallbackRes.error;
   }
-
-  if (contexto && contexto !== "TODOS") {
-    query = query.eq("lancamento.contexto", contexto);
-  }
-
-  const { data, error } = await query.order("data_vencimento", { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!data) {
+    return NextResponse.json([]);
   }
 
   // --- Auto-Sync Logic (FIXA e PARCELA) ---
@@ -77,15 +112,19 @@ export async function GET(request: Request) {
     const endOfMonthStr = format(endOfMonth(date), "yyyy-MM-dd");
     
     // 1. Buscar todas as regras ativas que começaram antes do fim deste mês
-    let regrasQuery = supabase
+    const selectRegras = temColunaContexto
+      ? "id, valor_base, data_inicio, tipo, total_parcelas, contexto"
+      : "id, valor_base, data_inicio, tipo, total_parcelas";
+
+    let regrasQuery = (supabase
       .from("lancamentos")
-      .select("id, valor_base, data_inicio, tipo, total_parcelas, contexto")
+      .select(selectRegras) as any)
       .eq("user_id", user.id)
       .in("tipo", ["FIXA", "PARCELA"])
       .eq("ativo", true)
       .lte("data_inicio", endOfMonthStr);
 
-    if (contexto && contexto !== "TODOS") {
+    if (temColunaContexto && contexto && contexto !== "TODOS") {
       regrasQuery = regrasQuery.eq("contexto", contexto);
     }
 
@@ -95,7 +134,7 @@ export async function GET(request: Request) {
       const idsPresentes = new Set(data.map((oc: any) => oc.lancamento_id));
       const novasOcorrencias: any[] = [];
 
-      regras.forEach(regra => {
+      regras.forEach((regra: any) => {
         if (idsPresentes.has(regra.id)) return;
 
         const dataInicio = parseISO(regra.data_inicio);
@@ -133,7 +172,8 @@ export async function GET(request: Request) {
         
         if (!syncError) {
           // Recarrega os dados para incluir as novas ocorrências
-          const { data: updatedData } = await query.order("data_vencimento", { ascending: true });
+          const reloadQuery = createOcorrenciasQuery(temColunaContexto ? selectComContexto : selectSemContexto, temColunaContexto);
+          const { data: updatedData } = await reloadQuery;
           if (updatedData) {
             // Re-mapeia e retorna os dados atualizados
             const syncLancamentoIds = Array.from(new Set(updatedData.map((oc: any) => oc.lancamento_id)));

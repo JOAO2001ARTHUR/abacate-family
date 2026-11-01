@@ -21,54 +21,66 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let query = supabase
-    .from("ocorrencias")
-    .select(`
-      id,
-      valor,
-      valor_editado,
-      status,
-      cancelada,
-      data_vencimento,
-      numero_parcela,
-      lancamento:lancamentos!inner (
-        id,
-        nome,
-        tipo,
-        total_parcelas,
-        natureza,
-        contexto,
-        contato_id,
-        categoria_id,
-        local_pagamento_id,
-        user_id,
-        valor_base
-      )
-    `)
-    .eq("lancamento.user_id", user.id)
-    .order("data_vencimento", { ascending: false });
+  function createVariaveisQuery(withContexto: boolean) {
+    const lancamentoSelect = withContexto
+      ? `id, nome, tipo, total_parcelas, natureza, contexto, contato_id, categoria_id, local_pagamento_id, user_id, valor_base`
+      : `id, nome, tipo, total_parcelas, natureza, contato_id, categoria_id, local_pagamento_id, user_id, valor_base`;
 
-  // Aplicar filtro baseado na dimensão
-  if (dimensao === 'contato') {
-    query = query.eq("lancamento.contato_id", id);
-  } else if (dimensao === 'categoria') {
-    query = query.eq("lancamento.categoria_id", id);
-  } else if (dimensao === 'onde_pagar') {
-    query = query.eq("lancamento.local_pagamento_id", id);
-  } else if (dimensao === 'recorrencia') {
-    query = query.eq("lancamento.tipo", id);
-  } else {
+    let q = (supabase
+      .from("ocorrencias")
+      .select(`
+        id,
+        valor,
+        valor_editado,
+        status,
+        cancelada,
+        data_vencimento,
+        numero_parcela,
+        lancamento:lancamentos!inner (${lancamentoSelect})
+      `) as any)
+      .eq("lancamento.user_id", user!.id)
+      .order("data_vencimento", { ascending: false });
+
+    if (dimensao === 'contato') {
+      q = q.eq("lancamento.contato_id", id);
+    } else if (dimensao === 'categoria') {
+      q = q.eq("lancamento.categoria_id", id);
+    } else if (dimensao === 'onde_pagar') {
+      q = q.eq("lancamento.local_pagamento_id", id);
+    } else if (dimensao === 'recorrencia') {
+      q = q.eq("lancamento.tipo", id);
+    }
+
+    if (withContexto && contexto && contexto !== "TODOS") {
+      q = q.eq("lancamento.contexto", contexto);
+    }
+
+    return q;
+  }
+
+  if (!['contato', 'categoria', 'onde_pagar', 'recorrencia'].includes(dimensao)) {
     return NextResponse.json({ error: "Invalid dimensao" }, { status: 400 });
   }
 
-  if (contexto && contexto !== "TODOS") {
-    query = query.eq("lancamento.contexto", contexto);
-  }
+  let { data, error } = await createVariaveisQuery(true);
 
-  const { data, error } = await query;
+  if (error && (error.code === "42703" || error.message?.includes("contexto"))) {
+    const fallbackRes = await createVariaveisQuery(false);
+    data = fallbackRes.data;
+    error = fallbackRes.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!data) {
+    return NextResponse.json({
+      resumo: { volume_total: 0, compromissos_pendentes: 0 },
+      totais_por_mes: [],
+      por_tipo: { FIXA: [], PARCELA: [], ESPORADICA: [] },
+      historico: []
+    });
   }
 
   // Agregação dos valores e classificação
@@ -97,6 +109,7 @@ export async function GET(request: Request) {
         por_tipo.FIXA[oc.lancamento.id] = {
           nome: oc.lancamento.nome,
           natureza: oc.lancamento.natureza,
+          contexto: oc.lancamento.contexto || 'PESSOAL',
           ocorrencias: []
         };
       }
@@ -106,6 +119,7 @@ export async function GET(request: Request) {
         por_tipo.PARCELA[oc.lancamento.id] = {
           nome: oc.lancamento.nome,
           natureza: oc.lancamento.natureza,
+          contexto: oc.lancamento.contexto || 'PESSOAL',
           total_parcelas: oc.lancamento.total_parcelas,
           parcelas_pagas: 0,
           valor_total: 0,

@@ -65,23 +65,38 @@ export function FormCriarLancamento() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado.");
 
-      const { data: lancamento, error: lError } = await supabase
+      const insertPayload: any = {
+        user_id: user.id,
+        nome,
+        natureza,
+        tipo,
+        categoria_id: categoriaId,
+        contato_id: contatoId || null,
+        local_pagamento_id: localPagamentoId || null,
+        valor_base: parseFloat(valorBase),
+        data_inicio: dataInicio,
+        total_parcelas: tipo === "PARCELA" ? parseInt(totalParcelas) : null,
+      };
+      if (contexto) {
+        insertPayload.contexto = contexto;
+      }
+
+      let { data: lancamento, error: lError } = await supabase
         .from("lancamentos")
-        .insert({
-          user_id: user.id,
-          nome,
-          natureza,
-          tipo,
-          contexto,
-          categoria_id: categoriaId,
-          contato_id: contatoId || null,
-          local_pagamento_id: localPagamentoId || null,
-          valor_base: parseFloat(valorBase),
-          data_inicio: dataInicio,
-          total_parcelas: tipo === "PARCELA" ? parseInt(totalParcelas) : null,
-        })
+        .insert(insertPayload)
         .select()
         .single();
+
+      if (lError && (lError.code === "42703" || lError.message?.includes("contexto"))) {
+        delete insertPayload.contexto;
+        const fallbackRes = await supabase
+          .from("lancamentos")
+          .insert(insertPayload)
+          .select()
+          .single();
+        lancamento = fallbackRes.data;
+        lError = fallbackRes.error;
+      }
 
       if (lError) throw lError;
 
