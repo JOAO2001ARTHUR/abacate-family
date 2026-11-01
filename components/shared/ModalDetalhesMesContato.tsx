@@ -141,14 +141,25 @@ function ItemDetalhe({ oc, showParcela }: { oc: any, showParcela?: boolean }) {
           {oc.status === 'BAIXADA' ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
         </div>
         <div>
-          <p className="font-bold text-on-surface text-base">
-            {oc.nome}
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-bold text-on-surface text-base">
+              {oc.nome}
+            </p>
+            {oc.lancamento?.contexto === 'EMPRESA' ? (
+              <span className="text-[8px] font-black text-primary-container bg-primary-fixed/60 px-1.5 py-0.5 rounded-sm uppercase tracking-wider border border-primary-container/20">
+                🏢 PJ
+              </span>
+            ) : (
+              <span className="text-[8px] font-black text-on-surface-variant bg-surface-container-high px-1.5 py-0.5 rounded-sm uppercase tracking-wider border border-outline-variant/40">
+                👤 PF
+              </span>
+            )}
             {showParcela && (
-              <span className="ml-3 text-[10px] font-black text-primary-container bg-primary-fixed/50 px-2 py-0.5 rounded-sm uppercase tracking-tighter">
+              <span className="text-[10px] font-black text-primary-container bg-primary-fixed/50 px-2 py-0.5 rounded-sm uppercase tracking-tighter">
                 Parcela {oc.numero_parcela}/{oc.lancamento.total_parcelas}
               </span>
             )}
-          </p>
+          </div>
           <p className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest opacity-60">
             {new Date(oc.data_vencimento + "T12:00:00").toLocaleDateString('pt-BR')} • {oc.lancamento.natureza}
           </p>

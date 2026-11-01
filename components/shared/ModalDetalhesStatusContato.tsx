@@ -219,7 +219,18 @@ export function ModalDetalhesStatusContato({ id, dimensao }: { id: string | null
                     />
                   </td>
                   <td className="px-8 py-6">
-                    <div className="font-black text-on-surface text-base uppercase tracking-tight">{d.lancamento.nome}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-black text-on-surface text-base uppercase tracking-tight">{d.lancamento.nome}</div>
+                      {d.lancamento.contexto === 'EMPRESA' ? (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-primary-fixed/60 text-primary-container border border-primary-container/20">
+                          🏢 PJ
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-surface-container-high text-on-surface-variant border border-outline-variant/40">
+                          👤 PF
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[10px] text-on-surface-variant font-bold opacity-50 uppercase tracking-widest mt-1">
                       Ref: {d.lancamento.id.substring(0,8)} • {d.lancamento.natureza}
                     </div>

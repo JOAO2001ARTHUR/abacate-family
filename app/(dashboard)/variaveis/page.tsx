@@ -30,7 +30,7 @@ export default function VariaveisPage() {
   const [busca, setBusca] = useState("");
   const [tabAtiva, setTabAtiva] = useState<'FIXA' | 'PARCELA' | 'ESPORADICA'>('FIXA');
 
-  const { abrirModal } = useUIStore();
+  const { abrirModal, contextoAtivo } = useUIStore();
 
   const { data: contatos, isLoading: isLoadingContatos } = useContatos();
   const { data: categorias, isLoading: isLoadingCategorias } = useCategorias();
@@ -239,9 +239,14 @@ export default function VariaveisPage() {
                         {dimensaoAtiva === 'recorrencia' && <><Calendar className="w-4 h-4 opacity-40" /> Periodicidade de Pagamento</>}
                       </p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-wrap">
                       <span className="inline-flex items-center px-4 py-1.5 rounded-sm text-[10px] font-black uppercase tracking-widest bg-primary-fixed/50 text-primary-container border border-primary-container/20">
                         {dimensaoAtiva.replace('_', ' ')}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-sm text-[10px] font-black uppercase tracking-wider bg-surface-container-high text-primary border border-outline-variant/60">
+                        {contextoAtivo === 'TODOS' && <><span>🥑</span> Esfera: Todos (Consolidado)</>}
+                        {contextoAtivo === 'PESSOAL' && <><span>👤</span> Esfera: Pessoal (PF)</>}
+                        {contextoAtivo === 'EMPRESA' && <><span>🏢</span> Esfera: Empresa (PJ)</>}
                       </span>
                       <div className="flex items-center gap-1.5 text-xs font-bold text-on-surface-variant opacity-60">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary-container" />
@@ -486,7 +491,18 @@ export default function VariaveisPage() {
                               {new Date(oc.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR')}
                             </td>
                             <td className="px-8 py-5">
-                              <p className="font-bold text-sm text-on-surface">{oc.lancamento.nome}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-sm text-on-surface">{oc.lancamento.nome}</p>
+                                {oc.lancamento.contexto === 'EMPRESA' ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-primary-fixed/60 text-primary-container border border-primary-container/20">
+                                    🏢 PJ
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-surface-container-high text-on-surface-variant border border-outline-variant/40">
+                                    👤 PF
+                                  </span>
+                                )}
+                              </div>
                               {oc.numero_parcela && (
                                 <span className="text-[10px] font-black text-primary uppercase opacity-60">Parcela {oc.numero_parcela}/{oc.lancamento.total_parcelas}</span>
                               )}

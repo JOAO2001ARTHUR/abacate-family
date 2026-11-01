@@ -37,6 +37,7 @@ export async function GET(request: Request) {
         tipo,
         total_parcelas,
         natureza,
+        contexto,
         contato_id,
         categoria_id,
         local_pagamento_id,
