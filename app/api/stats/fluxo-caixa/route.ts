@@ -9,7 +9,10 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const contexto = searchParams.get("contexto");
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
@@ -37,27 +40,39 @@ export async function GET() {
   const dataFimRange = meses[6].fim;
 
   // 1. Buscar ocorrências reais no intervalo
-  const { data: ocorrencias } = await supabase
+  let ocorrenciasQuery = supabase
     .from("ocorrencias")
     .select(`
       lancamento_id,
       valor,
       valor_editado,
       data_vencimento,
-      lancamento:lancamentos!inner (natureza, user_id)
+      lancamento:lancamentos!inner (natureza, user_id, contexto)
     `)
     .eq("lancamento.user_id", user.id)
     .gte("data_vencimento", dataInicioRange)
     .lte("data_vencimento", dataFimRange)
     .is("cancelada", false);
 
+  if (contexto && contexto !== "TODOS") {
+    ocorrenciasQuery = ocorrenciasQuery.eq("lancamento.contexto", contexto);
+  }
+
+  const { data: ocorrencias } = await ocorrenciasQuery;
+
   // 2. Buscar regras FIXA para projeção futura
-  const { data: regrasFixas } = await supabase
+  let regrasFixasQuery = supabase
     .from("lancamentos")
-    .select("id, natureza, valor_base, data_inicio")
+    .select("id, natureza, valor_base, data_inicio, contexto")
     .eq("user_id", user.id)
     .eq("tipo", "FIXA")
     .eq("ativo", true);
+
+  if (contexto && contexto !== "TODOS") {
+    regrasFixasQuery = regrasFixasQuery.eq("contexto", contexto);
+  }
+
+  const { data: regrasFixas } = await regrasFixasQuery;
 
   // Processar dados
   meses.forEach(m => {

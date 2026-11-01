@@ -13,6 +13,7 @@ export interface Ocorrencia {
   status_pago?: boolean;
   natureza: 'ENTRADA' | 'SAIDA';
   cancelada?: boolean;
+  contexto?: 'PESSOAL' | 'EMPRESA';
   categoria?: {
     id: string;
     nome: string;
@@ -37,10 +38,11 @@ export interface Ocorrencia {
 }
 
 export function useOcorrencias(customFilters?: any) {
-  const { mesAtivo, filtrosAtivos } = useUIStore();
+  const { mesAtivo, contextoAtivo, filtrosAtivos } = useUIStore();
 
   const finalFilters = customFilters || { 
     mes: mesAtivo,
+    contexto: contextoAtivo,
     ...filtrosAtivos 
   };
 
@@ -52,9 +54,11 @@ export function useOcorrencias(customFilters?: any) {
 }
 
 export function useContasAtrasadas() {
+  const { contextoAtivo } = useUIStore();
+
   return useQuery({
-    queryKey: ['ocorrencias', 'atrasadas'],
-    queryFn: () => api.get<Ocorrencia[]>('/ocorrencias', { atrasadas: 'true' }),
+    queryKey: ['ocorrencias', 'atrasadas', contextoAtivo],
+    queryFn: () => api.get<Ocorrencia[]>('/ocorrencias', { atrasadas: 'true', contexto: contextoAtivo }),
     staleTime: 1000 * 60, // 1 minuto
   });
 }

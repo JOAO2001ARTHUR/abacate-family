@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useUIStore } from "@/stores/useUIStore";
 
 export interface FluxoCaixaData {
   label: string;
@@ -12,9 +13,11 @@ export interface FluxoCaixaData {
 }
 
 export function useFluxoCaixa() {
+  const { contextoAtivo } = useUIStore();
+
   return useQuery({
-    queryKey: ['stats', 'fluxo-caixa'],
-    queryFn: () => api.get<FluxoCaixaData[]>('/stats/fluxo-caixa'),
+    queryKey: ['stats', 'fluxo-caixa', contextoAtivo],
+    queryFn: () => api.get<FluxoCaixaData[]>('/stats/fluxo-caixa', { contexto: contextoAtivo }),
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 }

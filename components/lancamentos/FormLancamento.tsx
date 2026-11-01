@@ -29,6 +29,7 @@ export function FormLancamento({ onClose, onSubmit, initialData }: FormLancament
     defaultValues: {
       natureza: "SAIDA",
       tipo: "ESPORADICA",
+      contexto: "PESSOAL",
       data_inicio: new Date().toISOString().split('T')[0],
       ...initialData
     }
@@ -36,6 +37,7 @@ export function FormLancamento({ onClose, onSubmit, initialData }: FormLancament
 
   const tipoSelecionado = watch("tipo");
   const naturezaSelecionada = watch("natureza");
+  const contextoSelecionado = watch("contexto");
 
   const handleFormSubmit = async (data: LancamentoInput) => {
     try {
@@ -58,29 +60,56 @@ export function FormLancamento({ onClose, onSubmit, initialData }: FormLancament
       </div>
 
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-        {/* Toggle Natureza */}
-        <div className="flex p-1 bg-muted rounded-lg w-full sm:w-fit">
-          <button
-            type="button"
-            onClick={() => setValue("natureza", "ENTRADA")}
-            className={cn(
-              "flex-1 sm:px-6 py-2 rounded-md text-sm font-semibold transition-all",
-              naturezaSelecionada === "ENTRADA" ? "bg-white shadow-sm text-entrada" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Entrada
-          </button>
-          <button
-            type="button"
-            onClick={() => setValue("natureza", "SAIDA")}
-            className={cn(
-              "flex-1 sm:px-6 py-2 rounded-md text-sm font-semibold transition-all",
-              naturezaSelecionada === "SAIDA" ? "bg-white shadow-sm text-saida" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Saída
-          </button>
-          <input type="hidden" {...register("natureza")} />
+        <div className="flex flex-wrap gap-4 items-center">
+          {/* Toggle Natureza */}
+          <div className="flex p-1 bg-muted rounded-lg w-full sm:w-fit">
+            <button
+              type="button"
+              onClick={() => setValue("natureza", "ENTRADA")}
+              className={cn(
+                "flex-1 sm:px-6 py-2 rounded-md text-sm font-semibold transition-all",
+                naturezaSelecionada === "ENTRADA" ? "bg-white shadow-sm text-entrada" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Entrada
+            </button>
+            <button
+              type="button"
+              onClick={() => setValue("natureza", "SAIDA")}
+              className={cn(
+                "flex-1 sm:px-6 py-2 rounded-md text-sm font-semibold transition-all",
+                naturezaSelecionada === "SAIDA" ? "bg-white shadow-sm text-saida" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Saída
+            </button>
+            <input type="hidden" {...register("natureza")} />
+          </div>
+
+          {/* Toggle Esfera / Contexto */}
+          <div className="flex p-1 bg-muted rounded-lg w-full sm:w-fit">
+            <button
+              type="button"
+              onClick={() => setValue("contexto", "PESSOAL")}
+              className={cn(
+                "flex-1 sm:px-6 py-2 rounded-md text-sm font-semibold transition-all",
+                contextoSelecionado === "PESSOAL" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              👤 Pessoal
+            </button>
+            <button
+              type="button"
+              onClick={() => setValue("contexto", "EMPRESA")}
+              className={cn(
+                "flex-1 sm:px-6 py-2 rounded-md text-sm font-semibold transition-all",
+                contextoSelecionado === "EMPRESA" ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              🏢 Empresa
+            </button>
+            <input type="hidden" {...register("contexto")} />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

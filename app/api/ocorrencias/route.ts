@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   const natureza = searchParams.get("natureza");
   const contato_id = searchParams.get("contato_id");
   const atrasadas = searchParams.get("atrasadas");
+  const contexto = searchParams.get("contexto");
   
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
@@ -28,6 +29,7 @@ export async function GET(request: Request) {
         nome,
         natureza,
         tipo,
+        contexto,
         total_parcelas,
         data_inicio,
         valor_base,
@@ -59,6 +61,10 @@ export async function GET(request: Request) {
     query = query.eq("lancamento.contato_id", contato_id);
   }
 
+  if (contexto && contexto !== "TODOS") {
+    query = query.eq("lancamento.contexto", contexto);
+  }
+
   const { data, error } = await query.order("data_vencimento", { ascending: true });
 
   if (error) {
@@ -71,13 +77,19 @@ export async function GET(request: Request) {
     const endOfMonthStr = format(endOfMonth(date), "yyyy-MM-dd");
     
     // 1. Buscar todas as regras ativas que começaram antes do fim deste mês
-    const { data: regras } = await supabase
+    let regrasQuery = supabase
       .from("lancamentos")
-      .select("id, valor_base, data_inicio, tipo, total_parcelas")
+      .select("id, valor_base, data_inicio, tipo, total_parcelas, contexto")
       .eq("user_id", user.id)
       .in("tipo", ["FIXA", "PARCELA"])
       .eq("ativo", true)
       .lte("data_inicio", endOfMonthStr);
+
+    if (contexto && contexto !== "TODOS") {
+      regrasQuery = regrasQuery.eq("contexto", contexto);
+    }
+
+    const { data: regras } = await regrasQuery;
 
     if (regras && regras.length > 0) {
       const idsPresentes = new Set(data.map((oc: any) => oc.lancamento_id));
@@ -124,7 +136,7 @@ export async function GET(request: Request) {
           const { data: updatedData } = await query.order("data_vencimento", { ascending: true });
           if (updatedData) {
             // Re-mapeia e retorna os dados atualizados
-    const syncLancamentoIds = Array.from(new Set(updatedData.map((oc: any) => oc.lancamento_id)));
+            const syncLancamentoIds = Array.from(new Set(updatedData.map((oc: any) => oc.lancamento_id)));
             const { data: syncRelated } = await supabase
               .from("ocorrencias")
               .select("lancamento_id, valor, valor_editado, status")
@@ -149,6 +161,7 @@ export async function GET(request: Request) {
                 nome: oc.lancamento.nome,
                 natureza: oc.lancamento.natureza,
                 tipo: oc.lancamento.tipo,
+                contexto: oc.lancamento.contexto || 'PESSOAL',
                 total_parcelas: oc.lancamento.total_parcelas,
                 valor_base: oc.lancamento.valor_base,
                 onde_pagar: oc.lancamento.local_pagamento?.nome,
@@ -196,6 +209,7 @@ export async function GET(request: Request) {
       nome: oc.lancamento.nome,
       natureza: oc.lancamento.natureza,
       tipo: oc.lancamento.tipo,
+      contexto: oc.lancamento.contexto || 'PESSOAL',
       total_parcelas: oc.lancamento.total_parcelas,
       valor_base: oc.lancamento.valor_base,
       onde_pagar: oc.lancamento.local_pagamento?.nome,

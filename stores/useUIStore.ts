@@ -1,6 +1,9 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 type ModalTipo = 'BAIXAR' | 'DESBAIXAR' | 'CANCELAR' | 'EXCLUIR_LANCAMENTO' | 'EDITAR_LANCAMENTO' | 'DUPLICAR_LANCAMENTO' | 'CRIAR_LANCAMENTO' | 'CRIAR_CATEGORIA' | 'EDITAR_CATEGORIA' | 'CRIAR_CONTATO' | 'EDITAR_CONTATO' | 'CRIAR_LOCAL_PAGAMENTO' | 'EDITAR_LOCAL_PAGAMENTO' | 'CONFIRMAR_ESCOPO' | 'DETALHES_MES_CONTATO' | 'DETALHES_PAGOS_CONTATO' | 'DETALHES_PENDENTES_CONTATO';
+
+export type ContextoVisualizacao = 'TODOS' | 'PESSOAL' | 'EMPRESA';
 
 interface Filtros {
   natureza: 'ENTRADA' | 'SAIDA' | 'TODAS';
@@ -12,32 +15,47 @@ interface Filtros {
 
 interface UIStore {
   mesAtivo: string; // Formato "YYYY-MM"
+  contextoAtivo: ContextoVisualizacao;
   filtrosAtivos: Filtros;
   modalAberto: ModalTipo | null;
   idSelecionado: string | null;
   sidebarRecolhida: boolean;
   setMesAtivo: (mes: string) => void;
+  setContextoAtivo: (ctx: ContextoVisualizacao) => void;
   setFiltros: (f: Partial<Filtros>) => void;
   abrirModal: (tipo: ModalTipo, id?: string | null) => void;
   fecharModal: () => void;
   toggleSidebar: () => void;
 }
 
-export const useUIStore = create<UIStore>((set) => ({
-  mesAtivo: new Date().toISOString().slice(0, 7),
-  filtrosAtivos: {
-    natureza: 'TODAS',
-    status: 'TODAS',
-    busca: '',
-  },
-  modalAberto: null,
-  idSelecionado: null,
-  sidebarRecolhida: true,
-  setMesAtivo: (mes) => set({ mesAtivo: mes }),
-  setFiltros: (f) => set((state) => ({ 
-    filtrosAtivos: { ...state.filtrosAtivos, ...f } 
-  })),
-  abrirModal: (tipo, id = null) => set({ modalAberto: tipo, idSelecionado: id }),
-  fecharModal: () => set({ modalAberto: null, idSelecionado: null }),
-  toggleSidebar: () => set((state) => ({ sidebarRecolhida: !state.sidebarRecolhida })),
-}));
+export const useUIStore = create<UIStore>()(
+  persist(
+    (set) => ({
+      mesAtivo: new Date().toISOString().slice(0, 7),
+      contextoAtivo: 'TODOS',
+      filtrosAtivos: {
+        natureza: 'TODAS',
+        status: 'TODAS',
+        busca: '',
+      },
+      modalAberto: null,
+      idSelecionado: null,
+      sidebarRecolhida: true,
+      setMesAtivo: (mes) => set({ mesAtivo: mes }),
+      setContextoAtivo: (ctx) => set({ contextoAtivo: ctx }),
+      setFiltros: (f) => set((state) => ({ 
+        filtrosAtivos: { ...state.filtrosAtivos, ...f } 
+      })),
+      abrirModal: (tipo, id = null) => set({ modalAberto: tipo, idSelecionado: id }),
+      fecharModal: () => set({ modalAberto: null, idSelecionado: null }),
+      toggleSidebar: () => set((state) => ({ sidebarRecolhida: !state.sidebarRecolhida })),
+    }),
+    {
+      name: 'abacate_ui_store',
+      partialize: (state) => ({ 
+        contextoAtivo: state.contextoAtivo,
+        sidebarRecolhida: state.sidebarRecolhida
+      }),
+    }
+  )
+);

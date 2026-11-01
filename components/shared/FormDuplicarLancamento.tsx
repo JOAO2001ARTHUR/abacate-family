@@ -42,6 +42,7 @@ export function FormDuplicarLancamento() {
   // Form State
   const [nome, setNome] = useState("");
   const [natureza, setNatureza] = useState<"ENTRADA" | "SAIDA">("SAIDA");
+  const [contexto, setContexto] = useState<"PESSOAL" | "EMPRESA">("PESSOAL");
   const [tipo, setTipo] = useState<"ESPORADICA" | "FIXA" | "PARCELA">("ESPORADICA");
   const [categoriaId, setCategoriaId] = useState("");
   const [contatoId, setContatoId] = useState("");
@@ -54,6 +55,7 @@ export function FormDuplicarLancamento() {
     if (lancamento) {
       setNome(`${lancamento.nome} (Cópia)`);
       setNatureza(lancamento.natureza);
+      setContexto(lancamento.contexto || "PESSOAL");
       setCategoriaId(lancamento.categoria_id);
       setContatoId(lancamento.contato_id || "");
       setValorBase(lancamento.valor_base.toString());
@@ -86,6 +88,7 @@ export function FormDuplicarLancamento() {
           nome,
           natureza,
           tipo,
+          contexto,
           categoria_id: categoriaId,
           contato_id: contatoId || null,
           local_pagamento_id: localPagamentoId || null,
@@ -167,6 +170,40 @@ export function FormDuplicarLancamento() {
               {error}
             </div>
           )}
+
+          {/* Esfera Financeira (Pessoal vs Empresa) */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest flex items-center justify-between">
+              <span>Esfera do Lançamento</span>
+              <span className="text-[9px] font-bold text-primary opacity-80">{contexto === 'PESSOAL' ? 'Vida Pessoal' : 'Pessoa Jurídica / Negócio'}</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 bg-surface-container-low p-1 rounded-md border border-outline-variant/30">
+              <button 
+                type="button"
+                onClick={() => setContexto("PESSOAL")}
+                className={cn(
+                  "flex items-center justify-center gap-2 py-2 text-xs font-black uppercase tracking-tighter rounded-sm transition-all",
+                  contexto === "PESSOAL" 
+                    ? "bg-surface-container-lowest text-primary shadow-sm border border-outline-variant/60" 
+                    : "text-on-surface-variant hover:text-on-surface"
+                )}
+              >
+                <span>👤</span> Pessoal (PF)
+              </button>
+              <button 
+                type="button"
+                onClick={() => setContexto("EMPRESA")}
+                className={cn(
+                  "flex items-center justify-center gap-2 py-2 text-xs font-black uppercase tracking-tighter rounded-sm transition-all",
+                  contexto === "EMPRESA" 
+                    ? "bg-primary-container text-on-primary shadow-sm" 
+                    : "text-on-surface-variant hover:text-on-surface"
+                )}
+              >
+                <span>🏢</span> Empresa (PJ)
+              </button>
+            </div>
+          </div>
 
           {/* Natureza & Nome */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

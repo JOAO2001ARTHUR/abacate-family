@@ -29,7 +29,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
-  const { abrirModal, sidebarRecolhida, toggleSidebar } = useUIStore();
+  const { abrirModal, sidebarRecolhida, toggleSidebar, contextoAtivo, setContextoAtivo } = useUIStore();
   
   const [user, setUser] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -208,6 +208,49 @@ export default function DashboardLayout({
               <span>Abacate</span>
               <span className="text-lg">🥑</span>
             </div>
+          </div>
+
+          {/* Central Segmented Global Switcher (Consolidado | Pessoal | Empresa) */}
+          <div className="flex bg-surface-container-low p-1 rounded-md border border-outline-variant/60 shadow-xs mx-2">
+            <button
+              onClick={() => setContextoAtivo('TODOS')}
+              className={cn(
+                "px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-sm transition-all flex items-center gap-1.5",
+                contextoAtivo === 'TODOS' 
+                  ? "bg-surface-container-lowest text-primary shadow-xs border border-outline-variant/60" 
+                  : "text-on-surface-variant hover:text-on-surface"
+              )}
+              title="Visão Consolidada (Pessoal + Empresa)"
+            >
+              <span className="text-sm">🥑</span>
+              <span className="hidden md:inline">Todos</span>
+            </button>
+            <button
+              onClick={() => setContextoAtivo('PESSOAL')}
+              className={cn(
+                "px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-sm transition-all flex items-center gap-1.5",
+                contextoAtivo === 'PESSOAL' 
+                  ? "bg-surface-container-lowest text-primary shadow-xs border border-outline-variant/60" 
+                  : "text-on-surface-variant hover:text-on-surface"
+              )}
+              title="Apenas Gastos e Entradas Pessoais (PF)"
+            >
+              <span className="text-sm">👤</span>
+              <span className="hidden sm:inline">Pessoal</span>
+            </button>
+            <button
+              onClick={() => setContextoAtivo('EMPRESA')}
+              className={cn(
+                "px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-black uppercase tracking-wider rounded-sm transition-all flex items-center gap-1.5",
+                contextoAtivo === 'EMPRESA' 
+                  ? "bg-primary-container text-on-primary shadow-xs" 
+                  : "text-on-surface-variant hover:text-on-surface"
+              )}
+              title="Apenas Gastos e Entradas da Empresa (PJ)"
+            >
+              <span className="text-sm">🏢</span>
+              <span className="hidden sm:inline">Empresa</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">

@@ -51,6 +51,7 @@ export async function PUT(
         valor_base: dadosLancamento.valor_base,
         natureza: dadosLancamento.natureza,
         tipo: dadosLancamento.tipo,
+        contexto: dadosLancamento.contexto || 'PESSOAL',
         total_parcelas: dadosLancamento.total_parcelas,
       })
       .eq("id", id)

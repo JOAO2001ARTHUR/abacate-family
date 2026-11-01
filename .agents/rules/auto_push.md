@@ -1,0 +1,1 @@
+Sempre que fizer qualquer alteração no código a pedido do usuário, você **DEVE** fazer o commit e push para o GitHub (branch master) imediatamente após a alteração, para que a Vercel já faça o deploy automático em produção. O usuário não quer testar nada localmente antes. O fluxo deve ser sempre: alterar código -> git add -> git commit -> git push.

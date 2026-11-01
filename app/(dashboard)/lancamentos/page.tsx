@@ -158,6 +158,9 @@ export default function LancamentosPage() {
         case 'contato': key = oc.contato?.nome || 'Particular'; break;
         case 'onde_pagar': key = oc.onde_pagar || 'Não informado'; break;
         case 'natureza': key = oc.natureza; break;
+        case 'contexto': 
+          key = oc.contexto === 'EMPRESA' ? '🏢 Empresa (PJ)' : '👤 Pessoal (PF)'; 
+          break;
         case 'recorrencia': 
           key = oc.tipo === 'FIXA' ? 'Mensal' : oc.tipo === 'PARCELA' ? 'Parcelado' : 'Único'; 
           break;
@@ -372,8 +375,24 @@ export default function LancamentosPage() {
       </section>
 
       {/* Table Actions / Feedback */}
-      {Object.keys(colWidths).length > 0 && (
-        <div className="flex justify-end -mb-4 relative z-10 animate-in fade-in slide-in-from-top-2 duration-300">
+      <div className="flex items-center justify-between -mb-4 relative z-10 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setResumoAtivo(prev => prev === 'contexto' ? null : 'contexto')}
+            className={cn(
+              "flex items-center gap-1.5 text-[10px] uppercase font-black tracking-widest transition-all py-1.5 px-3 rounded-t-md border border-b-0 translate-y-px shadow-xs",
+              resumoAtivo === 'contexto'
+                ? "bg-primary-container text-on-primary border-primary-container"
+                : "bg-surface-container-lowest text-on-surface-variant hover:text-on-surface border-outline-variant"
+            )}
+            title="Agrupar totais por Esfera (Pessoal vs Empresa)"
+          >
+            <span>🏢 / 👤</span>
+            <span>{resumoAtivo === 'contexto' ? "Remover Agrupamento" : "Agrupar por Esfera"}</span>
+          </button>
+        </div>
+
+        {Object.keys(colWidths).length > 0 && (
           <button 
             onClick={() => setColWidths({})}
             className="flex items-center gap-1.5 text-[10px] uppercase font-black tracking-widest text-on-surface-variant hover:text-primary-container transition-colors py-1.5 px-3 bg-surface-container-lowest border border-outline-variant rounded-t-md shadow-sm border-b-0 translate-y-px"
@@ -382,8 +401,8 @@ export default function LancamentosPage() {
             <RotateCcw className="w-3 h-3" />
             Restaurar Colunas
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Data Table Container */}
       <section className="bg-surface-container-lowest border border-outline-variant rounded-md overflow-hidden shadow-sm relative z-20">
@@ -638,6 +657,15 @@ export default function LancamentosPage() {
                     <td className="px-4 py-5">
                       <div className="flex items-center gap-2">
                         <div className="font-bold text-on-surface text-sm">{oc.nome}</div>
+                        {oc.contexto === 'EMPRESA' ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-primary-fixed/60 text-primary-container border border-primary-container/20 shrink-0" title="Esfera: Empresa (PJ)">
+                            🏢 PJ
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-surface-container-high text-on-surface-variant border border-outline-variant/40 shrink-0" title="Esfera: Pessoal (PF)">
+                            👤 PF
+                          </span>
+                        )}
                         {(() => {
                           const vDate = new Date(oc.data_vencimento + "T12:00:00");
                           const cDate = new Date(oc.data_competencia + "T12:00:00");

@@ -48,6 +48,7 @@ const renderLabelSaidas = (props: any) => {
 };
 
 export default function DashboardPage() {
+  const { contextoAtivo } = useUIStore();
   const { data: ocorrencias, isLoading } = useOcorrencias();
   const { data: contasAtrasadas } = useContasAtrasadas();
   const { data: fluxoData, isLoading: isLoadingFluxo } = useFluxoCaixa();
@@ -75,6 +76,22 @@ export default function DashboardPage() {
   }, { entradas: 0, saidas: 0 }) || { entradas: 0, saidas: 0 };
 
   const saldo = totais.entradas - totais.saidas;
+
+  // Breakdown PF vs PJ para quando a visualização for Consolidada (TODOS)
+  const breakdown = ocorrencias?.reduce((acc, o) => {
+    const valor = o.valor_editado ?? o.valor;
+    const isEmpresa = o.contexto === 'EMPRESA';
+    if (o.natureza === 'ENTRADA') {
+      if (isEmpresa) acc.empresaEntradas += valor;
+      else acc.pessoalEntradas += valor;
+    } else {
+      if (isEmpresa) acc.empresaSaidas += valor;
+      else acc.pessoalSaidas += valor;
+    }
+    return acc;
+  }, { pessoalEntradas: 0, pessoalSaidas: 0, empresaEntradas: 0, empresaSaidas: 0 }) || {
+    pessoalEntradas: 0, pessoalSaidas: 0, empresaEntradas: 0, empresaSaidas: 0
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700 pt-2">
@@ -122,7 +139,30 @@ export default function DashboardPage() {
 
       {/* ZONA 2: Situação Atual */}
       <section className="space-y-6">
-        <h2 className="text-lg font-bold text-on-surface">Situação Atual</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-bold text-on-surface">Situação Atual</h2>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-surface-container-high text-primary border border-outline-variant/60">
+              {contextoAtivo === 'TODOS' && <><span>🥑</span> Consolidado (PF + PJ)</>}
+              {contextoAtivo === 'PESSOAL' && <><span>👤</span> Apenas Vida Pessoal (PF)</>}
+              {contextoAtivo === 'EMPRESA' && <><span>🏢</span> Apenas Empresa (PJ)</>}
+            </span>
+          </div>
+
+          {contextoAtivo === 'TODOS' && (
+            <div className="flex items-center gap-4 text-xs font-bold text-on-surface-variant bg-surface-container-low px-3 py-1.5 rounded-md border border-outline-variant/40">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-outline" />
+                PF: <strong className="text-on-surface tnum">{formatarMoeda(breakdown.pessoalEntradas - breakdown.pessoalSaidas)}</strong>
+              </span>
+              <span className="h-3 w-px bg-outline-variant" />
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-primary-container" />
+                PJ: <strong className="text-primary-container tnum">{formatarMoeda(breakdown.empresaEntradas - breakdown.empresaSaidas)}</strong>
+              </span>
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-stack-lg">
           {/* Card Saldo */}
@@ -134,10 +174,17 @@ export default function DashboardPage() {
             <div className="text-2xl md:text-4xl font-black text-on-surface mb-3 tracking-tighter tnum">
               {formatarMoeda(saldo)}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-bold text-primary-container">
-              <TrendingUp className="w-4 h-4" />
-              <span>Conexão em tempo real</span>
-            </div>
+            {contextoAtivo === 'TODOS' ? (
+              <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant pt-1 border-t border-outline-variant/40">
+                <span>PF: {formatarMoeda(breakdown.pessoalEntradas - breakdown.pessoalSaidas)}</span>
+                <span>PJ: {formatarMoeda(breakdown.empresaEntradas - breakdown.empresaSaidas)}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-[11px] font-bold text-primary-container">
+                <TrendingUp className="w-4 h-4" />
+                <span>{contextoAtivo === 'PESSOAL' ? 'Finanças Pessoais' : 'Finanças da Empresa'}</span>
+              </div>
+            )}
           </div>
 
           {/* Card Entradas */}
@@ -149,9 +196,16 @@ export default function DashboardPage() {
             <div className="text-2xl md:text-4xl font-black text-on-surface mb-3 tracking-tighter tnum">
               {formatarMoeda(totais.entradas)}
             </div>
-            <div className="text-xs font-bold text-on-surface-variant">
-              Total recebido no período
-            </div>
+            {contextoAtivo === 'TODOS' ? (
+              <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant pt-1 border-t border-outline-variant/40">
+                <span>PF: {formatarMoeda(breakdown.pessoalEntradas)}</span>
+                <span>PJ: {formatarMoeda(breakdown.empresaEntradas)}</span>
+              </div>
+            ) : (
+              <div className="text-xs font-bold text-on-surface-variant">
+                Total recebido ({contextoAtivo === 'PESSOAL' ? 'PF' : 'PJ'})
+              </div>
+            )}
           </div>
 
           {/* Card Saídas */}
@@ -163,9 +217,16 @@ export default function DashboardPage() {
             <div className="text-2xl md:text-4xl font-black text-on-surface mb-3 tracking-tighter tnum">
               {formatarMoeda(totais.saidas)}
             </div>
-            <div className="text-xs font-bold text-on-surface-variant">
-              Comprometimento mensal
-            </div>
+            {contextoAtivo === 'TODOS' ? (
+              <div className="flex items-center justify-between text-[11px] font-bold text-on-surface-variant pt-1 border-t border-outline-variant/40">
+                <span>PF: {formatarMoeda(breakdown.pessoalSaidas)}</span>
+                <span>PJ: {formatarMoeda(breakdown.empresaSaidas)}</span>
+              </div>
+            ) : (
+              <div className="text-xs font-bold text-on-surface-variant">
+                Comprometimento ({contextoAtivo === 'PESSOAL' ? 'PF' : 'PJ'})
+              </div>
+            )}
           </div>
         </div>
 

@@ -6,6 +6,7 @@ export interface Lancamento {
   nome: string;
   natureza: 'ENTRADA' | 'SAIDA';
   tipo: 'FIXA' | 'ESPORADICA' | 'PARCELA';
+  contexto?: 'PESSOAL' | 'EMPRESA';
   total_parcelas?: number;
   valor_base: number;
   data_inicio: string;

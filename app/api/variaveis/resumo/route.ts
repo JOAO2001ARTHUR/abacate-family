@@ -6,6 +6,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const dimensao = searchParams.get("dimensao");
   const id = searchParams.get("id");
+  const contexto = searchParams.get("contexto");
 
   if (!dimensao || !id) {
     return NextResponse.json({ error: "Missing dimensao or id parameters" }, { status: 400 });
@@ -57,6 +58,10 @@ export async function GET(request: Request) {
     query = query.eq("lancamento.tipo", id);
   } else {
     return NextResponse.json({ error: "Invalid dimensao" }, { status: 400 });
+  }
+
+  if (contexto && contexto !== "TODOS") {
+    query = query.eq("lancamento.contexto", contexto);
   }
 
   const { data, error } = await query;

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useUIStore } from "@/stores/useUIStore";
 
 export interface VariavelResumo {
   resumo: {
@@ -18,9 +19,11 @@ export interface VariavelResumo {
 export type DimensaoType = 'contato' | 'categoria' | 'onde_pagar' | 'recorrencia';
 
 export function useVariavelResumo(dimensao: DimensaoType, id: string | null) {
+  const { contextoAtivo } = useUIStore();
+
   return useQuery({
-    queryKey: ['variaveis', dimensao, id, 'resumo'],
-    queryFn: () => id ? api.get<VariavelResumo>(`/variaveis/resumo?dimensao=${dimensao}&id=${id}`) : null,
+    queryKey: ['variaveis', dimensao, id, 'resumo', contextoAtivo],
+    queryFn: () => id ? api.get<VariavelResumo>(`/variaveis/resumo?dimensao=${dimensao}&id=${id}&contexto=${contextoAtivo}`) : null,
     enabled: !!id && !!dimensao,
   });
 }
