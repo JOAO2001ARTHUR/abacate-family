@@ -24,10 +24,9 @@ export async function GET(request: Request) {
   if (mes && /^\d{4}-\d{2}$/.test(mes)) {
     try {
       const date = parseISO(`${mes}-01`);
-      const startOfMonthStr = format(startOfMonth(date), "yyyy-MM-dd");
       const endOfMonthStr = format(endOfMonth(date), "yyyy-MM-dd");
 
-      // 1. Buscar todas as ocorrências do usuário para verificar duplicatas (sem filtros de tela)
+      // 1. Buscar todas as ocorrências ativas do usuário para identificar duplicatas
       const { data: todasOcs, error: ocsError } = await supabase
         .from("ocorrencias")
         .select(`
@@ -39,13 +38,18 @@ export async function GET(request: Request) {
           status,
           cancelada,
           criado_em,
+          valor,
           lancamento:lancamentos!inner (
             id,
             user_id,
-            tipo
+            tipo,
+            nome,
+            natureza,
+            contexto
           )
         `)
-        .eq("lancamento.user_id", user.id);
+        .eq("lancamento.user_id", user.id)
+        .is("cancelada", false);
 
       if (!ocsError && todasOcs) {
         // 2. DEDUPLICAÇÃO ATÔMICA: Agrupar por regra e mês de vencimento/competência
@@ -54,10 +58,10 @@ export async function GET(request: Request) {
         todasOcs.forEach((oc: any) => {
           const tipo = oc.lancamento?.tipo;
           const mesRef = (oc.data_competencia || oc.data_vencimento || "").slice(0, 7);
+          const nomeClean = (oc.lancamento?.nome || "").trim().toLowerCase();
           
-          // Chave única: 
-          // Para PARCELA: regra + número da parcela
-          // Para FIXA/VARIAVEL/outros: regra + mês de competência
+          // Chave primária: mesmo lancamento_id no mesmo mês/parcela
+          // Chave secundária: mesmo nome, valor, vencimento e natureza (caso haja lançamentos duplicados na origem)
           const chave = tipo === "PARCELA"
             ? `${oc.lancamento_id}_p_${oc.numero_parcela}`
             : `${oc.lancamento_id}_m_${mesRef}`;
@@ -66,24 +70,30 @@ export async function GET(request: Request) {
             grupos.set(chave, []);
           }
           grupos.get(chave)!.push(oc);
+
+          // Agrupamento por atributos para capturar regras idênticas criadas em duplicidade
+          const chaveAtributos = `attr_${nomeClean}_${oc.valor}_${oc.data_vencimento}_${oc.lancamento?.natureza}`;
+          if (!grupos.has(chaveAtributos)) {
+            grupos.set(chaveAtributos, []);
+          }
+          grupos.get(chaveAtributos)!.push(oc);
         });
 
-        const idsParaDeletar: string[] = [];
-        const ocsValidas: any[] = [];
+        const idsParaCancelar = new Set<string>();
+        const ocsValidas = new Map<string, any>();
 
         grupos.forEach((itens) => {
-          if (itens.length > 1) {
+          // Filtrar apenas itens que ainda não foram marcados para cancelamento
+          const itensVivos = itens.filter(it => !idsParaCancelar.has(it.id));
+
+          if (itensVivos.length > 1) {
             // Múltiplos registros para o mesmo lançamento no mesmo mês: duplicatas detectadas!
-            // Critério de preservação do registro oficial:
-            // 1. Status 'BAIXADA' tem prioridade absoluta (não apagar comprovantes de pagamento)
-            // 2. Não cancelada tem prioridade sobre cancelada
-            // 3. Mais antiga (menor criado_em ou menor id)
-            itens.sort((a, b) => {
+            // Critério de preservação:
+            // 1. Status 'BAIXADA' tem prioridade máxima (não apagar comprovantes de pagamento)
+            // 2. Mais antiga (menor criado_em ou menor id)
+            itensVivos.sort((a, b) => {
               if (a.status === "BAIXADA" && b.status !== "BAIXADA") return -1;
               if (b.status === "BAIXADA" && a.status !== "BAIXADA") return 1;
-
-              if (!a.cancelada && b.cancelada) return -1;
-              if (a.cancelada && !b.cancelada) return 1;
 
               const timeA = a.criado_em ? new Date(a.criado_em).getTime() : 0;
               const timeB = b.criado_em ? new Date(b.criado_em).getTime() : 0;
@@ -93,35 +103,50 @@ export async function GET(request: Request) {
             });
 
             // O primeiro elemento é o que fica
-            ocsValidas.push(itens[0]);
+            const keeper = itensVivos[0];
+            ocsValidas.set(keeper.id, keeper);
 
-            // Todos os seguintes são duplicatas que devem ser deletadas
-            for (let i = 1; i < itens.length; i++) {
-              idsParaDeletar.push(itens[i].id);
+            // Todos os seguintes são duplicatas que devem ser canceladas e deletadas
+            for (let i = 1; i < itensVivos.length; i++) {
+              idsParaCancelar.add(itensVivos[i].id);
             }
-          } else {
-            ocsValidas.push(itens[0]);
+          } else if (itensVivos.length === 1) {
+            ocsValidas.set(itensVivos[0].id, itensVivos[0]);
           }
         });
 
-        // Executar remoção física das duplicatas no banco
-        if (idsParaDeletar.length > 0) {
-          console.log(`[Deduplicacao] Limpando ${idsParaDeletar.length} ocorrencias duplicadas do usuario ${user.id}`);
-          await supabase.from("ocorrencias").delete().in("id", idsParaDeletar);
+        const listaIdsParaCancelar = Array.from(idsParaCancelar);
+
+        // Executar soft delete (cancelada = true) e tentativa de delete físico
+        if (listaIdsParaCancelar.length > 0) {
+          console.log(`[Deduplicacao] Cancelando ${listaIdsParaCancelar.length} ocorrencias duplicadas do usuario ${user.id}`);
+          
+          // Soft-delete imediato (compatível com todas as políticas RLS)
+          await supabase
+            .from("ocorrencias")
+            .update({ cancelada: true })
+            .in("id", listaIdsParaCancelar);
+
+          // Hard-delete como faxina complementar
+          try {
+            await supabase.from("ocorrencias").delete().in("id", listaIdsParaCancelar);
+          } catch (e) {
+            // Se hard-delete for restrito por RLS, soft-delete já garante exclusão de todas as queries
+          }
         }
 
         // 3. AUTO-SYNC: Buscar todas as regras ativas de FIXA e PARCELA do usuário
         const { data: regras } = await supabase
           .from("lancamentos")
-          .select("id, valor_base, data_inicio, tipo, total_parcelas, user_id")
+          .select("id, valor_base, data_inicio, tipo, total_parcelas, user_id, nome, natureza")
           .eq("user_id", user.id)
           .in("tipo", ["FIXA", "PARCELA"])
           .eq("ativo", true)
           .lte("data_inicio", endOfMonthStr);
 
         if (regras && regras.length > 0) {
-          // Filtrar as ocorrências válidas deste mês específico
-          const ocsDoMesAtual = ocsValidas.filter((oc: any) => {
+          const listaValidas = Array.from(ocsValidas.values());
+          const ocsDoMesAtual = listaValidas.filter((oc: any) => {
             const venc = oc.data_vencimento || "";
             return venc.startsWith(mes);
           });
@@ -133,7 +158,11 @@ export async function GET(request: Request) {
             const diffMeses = differenceInMonths(date, startOfMonth(dataInicio));
 
             if (regra.tipo === "FIXA") {
-              const jaExiste = ocsDoMesAtual.some((oc: any) => oc.lancamento_id === regra.id);
+              const jaExiste = ocsDoMesAtual.some((oc: any) => 
+                oc.lancamento_id === regra.id || 
+                (oc.lancamento?.nome === regra.nome && oc.lancamento?.natureza === regra.natureza)
+              );
+
               if (!jaExiste && diffMeses >= 0) {
                 const diaOriginal = parseInt(regra.data_inicio.split("-")[2] || "1", 10);
                 const ultimoDia = endOfMonth(date).getDate();
@@ -277,6 +306,7 @@ export async function GET(request: Request) {
         .from("ocorrencias")
         .select("lancamento_id, valor, valor_editado, status")
         .in("lancamento_id", lancamentoIds)
+        .is("cancelada", false)
     : { data: [] };
 
   const statsMap: Record<string, { total: number, pago: number }> = {};
@@ -314,5 +344,30 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json(flattenedData);
+  // --- CAMADA DE SEGURANÇA FINAL (In-Memory Deduplication) ---
+  // Garante que mesmo sob qualquer condição imprevista no banco,
+  // NUNCA serão retornados lançamentos duplicados para a interface.
+  const chavesVistas = new Set<string>();
+  const dadosDeduplicados = flattenedData.filter((oc: any) => {
+    const mesRef = (oc.data_competencia || oc.data_vencimento || "").slice(0, 7);
+    const nomeClean = (oc.nome || "").trim().toLowerCase();
+
+    // 1. Chave por regra/lançamento
+    const chaveRegra = oc.tipo === "PARCELA"
+      ? `${oc.lancamento_id}_p_${oc.numero_parcela}`
+      : `${oc.lancamento_id}_m_${mesRef}`;
+
+    // 2. Chave por atributos idênticos (proteção contra múltiplos lançamentos idênticos)
+    const chaveAtributos = `attr_${nomeClean}_${oc.valor}_${oc.data_vencimento}_${oc.natureza}_${oc.contexto}`;
+
+    if (chavesVistas.has(chaveRegra) || chavesVistas.has(chaveAtributos)) {
+      return false;
+    }
+
+    chavesVistas.add(chaveRegra);
+    chavesVistas.add(chaveAtributos);
+    return true;
+  });
+
+  return NextResponse.json(dadosDeduplicados);
 }

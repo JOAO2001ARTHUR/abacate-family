@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useOcorrencias, useContasAtrasadas, calcularStatusReal } from "@/hooks/useOcorrencias";
 import { formatarMoeda } from "@/lib/utils";
 import { 
@@ -60,28 +61,49 @@ export default function DashboardPage() {
   const emAtraso = contasAtrasadas || [];
   const totalEmAtraso = emAtraso.reduce((acc, oc) => acc + (oc.valor_editado ?? oc.valor), 0);
   
+  // Deduplicação resiliente
+  const ocorrenciasUnicas = useMemo(() => {
+    const chavesVistas = new Set<string>();
+    return (ocorrencias || []).filter(oc => {
+      const mesRef = (oc.data_competencia || oc.data_vencimento || "").slice(0, 7);
+      const nomeClean = (oc.nome || "").trim().toLowerCase();
+      const regraId = oc.lancamento_id || oc.regra_id || oc.id;
+      const chaveRegra = oc.tipo === 'PARCELA' 
+        ? `${regraId}_p_${oc.numero_parcela}` 
+        : `${regraId}_m_${mesRef}`;
+      const chaveAttr = `attr_${nomeClean}_${oc.valor}_${oc.data_vencimento}_${oc.natureza}_${oc.contexto}`;
+
+      if (chavesVistas.has(chaveRegra) || chavesVistas.has(chaveAttr)) {
+        return false;
+      }
+      chavesVistas.add(chaveRegra);
+      chavesVistas.add(chaveAttr);
+      return true;
+    });
+  }, [ocorrencias]);
+
   // Próximos 7 dias (Horizon Zone)
   const hoje = new Date();
   const emSeteDias = new Date();
   emSeteDias.setDate(hoje.getDate() + 7);
   
-  const proximos = ocorrencias?.filter(oc => {
+  const proximos = ocorrenciasUnicas.filter(oc => {
     const dataVenc = new Date(oc.data_vencimento);
     return dataVenc >= hoje && dataVenc <= emSeteDias && oc.status !== 'BAIXADA';
-  }).slice(0, 4) || [];
+  }).slice(0, 4);
 
   // Cálculos de Totais
-  const totais = ocorrencias?.reduce((acc, o) => {
+  const totais = ocorrenciasUnicas.reduce((acc, o) => {
     const valor = o.valor_editado ?? o.valor;
     if (o.natureza === 'ENTRADA') acc.entradas += valor;
     else acc.saidas += valor;
     return acc;
-  }, { entradas: 0, saidas: 0 }) || { entradas: 0, saidas: 0 };
+  }, { entradas: 0, saidas: 0 });
 
   const saldo = totais.entradas - totais.saidas;
 
   // Breakdown PF vs PJ para quando a visualização for Consolidada (TODOS)
-  const breakdown = ocorrencias?.reduce((acc, o) => {
+  const breakdown = ocorrenciasUnicas.reduce((acc, o) => {
     const valor = o.valor_editado ?? o.valor;
     const isEmpresa = o.contexto === 'EMPRESA';
     if (o.natureza === 'ENTRADA') {
@@ -92,9 +114,7 @@ export default function DashboardPage() {
       else acc.pessoalSaidas += valor;
     }
     return acc;
-  }, { pessoalEntradas: 0, pessoalSaidas: 0, empresaEntradas: 0, empresaSaidas: 0 }) || {
-    pessoalEntradas: 0, pessoalSaidas: 0, empresaEntradas: 0, empresaSaidas: 0
-  };
+  }, { pessoalEntradas: 0, pessoalSaidas: 0, empresaEntradas: 0, empresaSaidas: 0 });
 
   // Identificar transferências de Pró-labore para neutralizar dupla contagem
   const isProlabore = (o: any) => {
@@ -107,7 +127,7 @@ export default function DashboardPage() {
   };
 
   let prolaboreTransferido = 0;
-  ocorrencias?.forEach(o => {
+  ocorrenciasUnicas.forEach(o => {
     if (isProlabore(o) && o.contexto === 'PESSOAL' && o.natureza === 'ENTRADA') {
       prolaboreTransferido += (o.valor_editado ?? o.valor);
     }

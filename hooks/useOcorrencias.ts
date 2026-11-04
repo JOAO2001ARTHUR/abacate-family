@@ -30,6 +30,7 @@ export interface Ocorrencia {
   tipo: 'FIXA' | 'VARIAVEL' | 'PARCELA';
   onde_pagar?: string;
   regra_id?: string;
+  lancamento_id?: string;
   financeiro_stats?: {
     total: number;
     pago: number;

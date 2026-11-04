@@ -122,7 +122,28 @@ export default function LancamentosPage() {
     return 'PENDENTE';
   };
 
-  const filtered = (ocorrencias || []).filter(oc => {
+  // Deduplicação resiliente client-side (garante integridade em caso de cache antigo)
+  const ocorrenciasUnicas = useMemo(() => {
+    const chavesVistas = new Set<string>();
+    return (ocorrencias || []).filter(oc => {
+      const mesRef = (oc.data_competencia || oc.data_vencimento || "").slice(0, 7);
+      const nomeClean = (oc.nome || "").trim().toLowerCase();
+      const regraId = oc.lancamento_id || oc.regra_id || oc.id;
+      const chaveRegra = oc.tipo === 'PARCELA' 
+        ? `${regraId}_p_${oc.numero_parcela}` 
+        : `${regraId}_m_${mesRef}`;
+      const chaveAttr = `attr_${nomeClean}_${oc.valor}_${oc.data_vencimento}_${oc.natureza}_${oc.contexto}`;
+
+      if (chavesVistas.has(chaveRegra) || chavesVistas.has(chaveAttr)) {
+        return false;
+      }
+      chavesVistas.add(chaveRegra);
+      chavesVistas.add(chaveAttr);
+      return true;
+    });
+  }, [ocorrencias]);
+
+  const filtered = ocorrenciasUnicas.filter(oc => {
     // Filtro por natureza (Todas / Saídas / Entradas)
     if (abaNatureza !== 'TODAS' && oc.natureza !== abaNatureza) {
       return false;
@@ -257,7 +278,7 @@ export default function LancamentosPage() {
   });
 
   // Métricas do Mês (Previsibilidade de Caixa)
-  const totais = (ocorrencias || []).reduce((acc, o) => {
+  const totais = ocorrenciasUnicas.reduce((acc, o) => {
     const valor = o.valor_editado ?? o.valor;
     const status = getStatusVisual(o);
 
