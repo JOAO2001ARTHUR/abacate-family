@@ -48,8 +48,11 @@ const renderLabelSaidas = (props: any) => {
 };
 
 export default function DashboardPage() {
-  const { contextoAtivo, abrirModal } = useUIStore();
-  const { data: ocorrencias, isLoading } = useOcorrencias();
+  const { mesAtivo, contextoAtivo, abrirModal } = useUIStore();
+  const { data: ocorrencias, isLoading } = useOcorrencias({
+    mes: mesAtivo,
+    contexto: contextoAtivo
+  });
   const { data: contasAtrasadas } = useContasAtrasadas();
   const { data: fluxoData, isLoading: isLoadingFluxo } = useFluxoCaixa();
 

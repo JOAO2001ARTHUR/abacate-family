@@ -34,9 +34,13 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export default function LancamentosPage() {
   const queryClient = useQueryClient();
-  const { data: ocorrencias, isLoading } = useOcorrencias();
-  const { abrirModal, mesAtivo, setMesAtivo, filtrosAtivos, setFiltros, contextoAtivo } = useUIStore();
+  const { abrirModal, mesAtivo, setMesAtivo, contextoAtivo } = useUIStore();
+  const { data: ocorrencias, isLoading } = useOcorrencias({
+    mes: mesAtivo,
+    contexto: contextoAtivo
+  });
   
+  const [abaNatureza, setAbaNatureza] = useState<'TODAS' | 'SAIDA' | 'ENTRADA'>('TODAS');
   const [busca, setBusca] = useState("");
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [mostrarFiltrosColunas, setMostrarFiltrosColunas] = useState(false);
@@ -119,6 +123,11 @@ export default function LancamentosPage() {
   };
 
   const filtered = (ocorrencias || []).filter(oc => {
+    // Filtro por natureza (Todas / Saídas / Entradas)
+    if (abaNatureza !== 'TODAS' && oc.natureza !== abaNatureza) {
+      return false;
+    }
+
     const statusVisual = getStatusVisual(oc);
 
     // Filtro rápido de status
@@ -404,10 +413,10 @@ export default function LancamentosPage() {
           {/* Abas Rápidas de Natureza */}
           <div className="flex bg-surface-container-low p-1 rounded-md border border-outline-variant/40 shrink-0">
             <button
-              onClick={() => setFiltros({ natureza: 'TODAS' })}
+              onClick={() => setAbaNatureza('TODAS')}
               className={cn(
                 "px-3.5 py-1.5 text-xs font-black uppercase tracking-wider rounded-sm transition-all flex items-center gap-2",
-                filtrosAtivos.natureza === 'TODAS' 
+                abaNatureza === 'TODAS' 
                   ? "bg-surface-container-lowest text-on-surface shadow-xs border border-outline-variant/60" 
                   : "text-on-surface-variant hover:text-on-surface"
               )}
@@ -415,10 +424,10 @@ export default function LancamentosPage() {
               <span>🥑</span> Todas as Movimentações
             </button>
             <button
-              onClick={() => setFiltros({ natureza: 'SAIDA' })}
+              onClick={() => setAbaNatureza('SAIDA')}
               className={cn(
                 "px-3.5 py-1.5 text-xs font-black uppercase tracking-wider rounded-sm transition-all flex items-center gap-2",
-                filtrosAtivos.natureza === 'SAIDA' 
+                abaNatureza === 'SAIDA' 
                   ? "bg-error text-on-error shadow-xs" 
                   : "text-on-surface-variant hover:text-on-surface"
               )}
@@ -426,10 +435,10 @@ export default function LancamentosPage() {
               <span>📉</span> Contas a Pagar (Saídas)
             </button>
             <button
-              onClick={() => setFiltros({ natureza: 'ENTRADA' })}
+              onClick={() => setAbaNatureza('ENTRADA')}
               className={cn(
                 "px-3.5 py-1.5 text-xs font-black uppercase tracking-wider rounded-sm transition-all flex items-center gap-2",
-                filtrosAtivos.natureza === 'ENTRADA' 
+                abaNatureza === 'ENTRADA' 
                   ? "bg-primary-container text-on-primary shadow-xs" 
                   : "text-on-surface-variant hover:text-on-surface"
               )}
